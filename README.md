@@ -37,10 +37,8 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # Next, you need to get a free API key from [OpenWeatherMap](https://openweathermap.org/).
-
 # 3. Open the `.env` file and paste your API key into it:
-## OPENWEATHER_API_KEY=YOUR_API_KEY_HERE
-# 
+OPENWEATHER_API_KEY=YOUR_API_KEY_HERE
 ```
 
 ### 2. Frontend Setup
