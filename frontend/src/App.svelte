@@ -310,16 +310,21 @@
       y = 20;
     }
 
-    doc.save('relatorio_demeter.pdf');
-
-    // Adicionar rodapé em todas as páginas
-    const pageCount = doc.internal.getNumberOfPages();
+    // Adicionar rodapé em todas as páginas ANTES de salvar
+    const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(150);
-      doc.text('Demeter - Inteligência Climática para o Agro', doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+      doc.text(
+        'Demeter - Inteligência Climática para o Agro',
+        doc.internal.pageSize.getWidth() / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: 'center' }
+      );
     }
+
+    doc.save('relatorio_demeter.pdf');
   }
 
   async function handleAnalyzeClick() {
@@ -503,27 +508,72 @@
 </main>
 
 <style>
+  :global(*, *::before, *::after) {
+    box-sizing: border-box;
+  }
+
+  :global(html, body) {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
   :global(body) {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     background-color: #f0f4f8;
     color: #333;
+    min-height: 100vh; /* Garante que o body ocupe toda a altura da viewport */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centraliza o conteúdo horizontalmente */
   }
 
   main {
-    width: 100%;
-    max-width: 800px;
-    margin: 40px auto;
+    width: 100%; /* Garante que o main ocupe a largura total disponível */
+    max-width: 1200px; /* Largura máxima para telas grandes */
     padding: 2rem;
     background-color: #fff;
     border-radius: 12px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    min-width: 427px; /* Garante espaço suficiente para o layout de duas colunas */
   }
+
+  /* Estilos para telas menores (celulares) */
+  @media (max-width: 768px) {
+    main {
+      width: 100%; /* Ocupa toda a largura em telas pequenas */
+      margin: 0; /* Remove margens laterais */
+      padding: 1rem; /* Reduz o padding */
+      border-radius: 0; /* Remove bordas arredondadas */
+      box-shadow: none; /* Remove sombra */
+      min-width: 395px; /* Garante espaço suficiente para o layout de duas colunas */
+    }
+
+    .input-coords {
+      flex-direction: column; /* Empilha inputs de lat/lon */
+    }
+
+    .call-to-action {
+      flex-direction: column; /* Empilha botões */
+      gap: 10px;
+    }
+
+    .print-button {
+      margin-left: 0; /* Remove margem do botão de imprimir */
+    }
+
+    
+  }
+
+  
 
   header {
     text-align: center;
     border-bottom: 1px solid #e0e0e0;
     padding-bottom: 1.5rem;
     margin-bottom: 2rem;
+    width: 100%; /* Garante que o header ocupe a largura total do main */
   }
 
   header h1 {
@@ -539,6 +589,7 @@
 
   section {
     margin-bottom: 2rem;
+    width: 100%; /* Garante que as seções ocupem a largura total do main */
   }
 
   h2 {
@@ -572,13 +623,17 @@
     padding: 1.5rem;
     border-radius: 8px;
     border: 1px solid #e0e0e0;
+    min-width: 363px;
   }
 
   .config-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 15px;
+    min-width: 315px;
   }
+
+  
 
   .config-item {
     display: flex;
@@ -659,5 +714,6 @@
     border-top: 1px solid #e0e0e0;
     font-size: 0.9rem;
     color: #999;
+    width: 100%; /* Garante que o footer ocupe a largura total do main */
   }
 </style>
