@@ -28,12 +28,11 @@
   let irrigationMinHours: number = 24; // Irrigação
   let minWindowHours: number = 12; // Geral
 
-  // Novo: Perfil de cultura selecionado
-  let selectedCropProfile: string = 'default';
+  let selectedCropProfile: string = 'livre';
 
   // Novo: Mapeamento de perfis de cultura (deve ser sincronizado com o backend)
   const CROP_PROFILES: { [key: string]: any } = {
-    "default": {
+    "livre": {
         windSpeedThresholdMs: 2.8,
         precipitationProbThreshold: 0.1,
         fungalRiskHumidity: 80,
@@ -344,7 +343,7 @@
         body: JSON.stringify({
           lat: selectedCoords.lat,
           lon: selectedCoords.lon,
-          crop_profile: selectedCropProfile === 'default' ? null : selectedCropProfile, // Envia o perfil selecionado
+          crop_profile: selectedCropProfile === 'livre' ? null : selectedCropProfile,
           wind_speed_threshold_ms: windSpeedThresholdMs,
           precipitation_prob_threshold: precipitationProbThreshold,
           fungal_risk_humidity: fungalRiskHumidity,
@@ -378,342 +377,336 @@
   }
 </script>
 
-<main>
-  <header>
-    <h1>Demeter</h1>
-    <p>Inteligência Climática para Decisões Agrícolas</p>
-  </header>
-
-  <section>
-    <h2>1. Selecione a Localização</h2>
-    <div class="input-coords">
-      <input type="text" placeholder="Latitude" bind:value={latitudeInput} />
-      <input type="text" placeholder="Longitude" bind:value={longitudeInput} />
+<div class="app-container">
+  <div class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Demeter</h1>
+      <p class="hero-subtitle">Inteligência Climática para Decisões Agrícolas</p>
     </div>
-    <p class="or-text">ou clique no mapa:</p>
-    <Map on:locationselect={handleLocationSelect} currentLat={selectedCoords?.lat} currentLon={selectedCoords?.lon} />
-  </section>
+  </div>
 
-  <section class="config-section">
-    <h2>2. Configure os Limiares de Análise</h2>
-    <div class="config-item">
-      <label for="cropProfile">Perfil da Cultura:</label>
-      <select id="cropProfile" bind:value={selectedCropProfile}>
-        {#each Object.keys(CROP_PROFILES) as profileName}
-          <option value={profileName}>{profileName.charAt(0).toUpperCase() + profileName.slice(1)}</option>
-        {/each}
-      </select>
-    </div>
-    <div class="config-grid">
-      <div class="config-item">
-        <label for="windSpeed">Vento Pulverização (m/s):</label>
-        <input type="number" id="windSpeed" bind:value={windSpeedThresholdMs} step="0.1" min="0" max="10">
-      </div>
-      <div class="config-item">
-        <label for="rainProbSpray">Chuva Pulverização (%):</label>
-        <input type="number" id="rainProbSpray" bind:value={precipitationProbThreshold} step="0.01" min="0" max="1">
-      </div>
-      <div class="config-item">
-        <label for="fungalHumidity">Umidade Risco Fúngico (%):</label>
-        <input type="number" id="fungalHumidity" bind:value={fungalRiskHumidity} step="1" min="0" max="100">
-      </div>
-      <div class="config-item">
-        <label for="fungalTempMin">Temp. Mín. Risco Fúngico (°C):</label>
-        <input type="number" id="fungalTempMin" bind:value={fungalRiskTempMin} step="1" min="-10" max="50">
-      </div>
-      <div class="config-item">
-        <label for="fungalTempMax">Temp. Máx. Risco Fúngico (°C):</label>
-        <input type="number" id="fungalTempMax" bind:value={fungalRiskTempMax} step="1" min="-10" max="50">
-      </div>
-      <div class="config-item">
-        <label for="frostTemp">Temp. Geada (°C):</label>
-        <input type="number" id="frostTemp" bind:value={frostTempThreshold} step="1" min="-20" max="10">
-      </div>
-      <div class="config-item">
-        <label for="heatTemp">Temp. Estresse Calor (°C):</label>
-        <input type="number" id="heatTemp" bind:value={heatStressTempThreshold} step="1" min="20" max="60">
-      </div>
-      <div class="config-item">
-        <label for="plantingTempMin">Temp. Mín. Plantio (°C):</label>
-        <input type="number" id="plantingTempMin" bind:value={plantingTempMin} step="1" min="0" max="40">
-      </div>
-      <div class="config-item">
-        <label for="plantingTempMax">Temp. Máx. Plantio (°C):</label>
-        <input type="number" id="plantingTempMax" bind:value={plantingTempMax} step="1" min="0" max="40">
-      </div>
-      <div class="config-item">
-        <label for="plantingRainProb">Chuva Plantio (%):</label>
-        <input type="number" id="plantingRainProb" bind:value={plantingRainProbThreshold} step="0.01" min="0" max="1">
-      </div>
-      <div class="config-item">
-        <label for="harvestRainProb">Chuva Colheita (%):</label>
-        <input type="number" id="harvestRainProb" bind:value={harvestRainProbThreshold} step="0.01" min="0" max="1">
-      </div>
-      <div class="config-item">
-        <label for="harvestHumidity">Umidade Colheita (%):</label>
-        <input type="number" id="harvestHumidity" bind:value={harvestHumidityThreshold} step="1" min="0" max="100">
-      </div>
-      <div class="config-item">
-        <label for="irrigationNoRain">Chuva Irrigação (%):</label>
-        <input type="number" id="irrigationNoRain" bind:value={irrigationNoRainThreshold} step="0.01" min="0" max="1">
-      </div>
-      <div class="config-item">
-        <label for="irrigationTemp">Temp. Irrigação (°C):</label>
-        <input type="number" id="irrigationTemp" bind:value={irrigationTempThreshold} step="1" min="0" max="50">
-      </div>
-      <div class="config-item">
-        <label for="irrigationMinHours">Min. Horas Irrigação:</label>
-        <input type="number" id="irrigationMinHours" bind:value={irrigationMinHours} step="3" min="0" max="72">
-      </div>
-      <div class="config-item">
-        <label for="minWindowHours">Min. Horas Janela:</label>
-        <input type="number" id="minWindowHours" bind:value={minWindowHours} step="3" min="0" max="72">
-      </div>
-    </div>
-  </section>
+  <div class="main-content">
+    <div class="content-wrapper">
+      <!-- Seção de Localização -->
+      <div class="section-card">
+        <div class="section-header">
+          <h2>Selecione a Localização</h2>
+          <p>Insira as coordenadas ou clique no mapa para selecionar</p>
+        </div>
+        
+        <div class="location-inputs">
+          <div class="input-group">
+            <input 
+              type="text" 
+              placeholder="Latitude" 
+              bind:value={latitudeInput}
+              class="location-input"
+            />
+            <input 
+              type="text" 
+              placeholder="Longitude" 
+              bind:value={longitudeInput}
+              class="location-input"
+            />
+          </div>
+        </div>
 
-  <section class="call-to-action">
-    <button on:click={handleAnalyzeClick} disabled={!selectedCoords || isLoading}>
+        <div class="map-container">
+          <Map 
+            on:locationselect={handleLocationSelect} 
+            currentLat={selectedCoords?.lat} 
+            currentLon={selectedCoords?.lon} 
+          />
+        </div>
+      </div>
+
+      <!-- Seção de Configuração -->
+      <div class="section-card">
+        <div class="section-header">
+          <h2>Configure os Parâmetros</h2>
+          <p>Ajuste os limiares de análise para sua cultura</p>
+        </div>
+
+        <div class="config-content">
+          <div class="crop-profile-section">
+            <label for="cropProfile" class="profile-label">Perfil da Cultura:</label>
+            <select id="cropProfile" bind:value={selectedCropProfile} class="profile-select">
+              {#each Object.keys(CROP_PROFILES) as profileName}
+                <option value={profileName}>
+                  {profileName.charAt(0).toUpperCase() + profileName.slice(1)}
+                </option>
+              {/each}
+            </select>
+          </div>
+
+          <div class="config-grid">
+            <div class="config-item">
+              <label for="windSpeedThresholdMs">Vento Pulverização (m/s)</label>
+              <input 
+                id="windSpeedThresholdMs"
+                type="number" 
+                bind:value={windSpeedThresholdMs} 
+                step="0.1" 
+                min="0" 
+                max="10"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="precipitationProbThreshold">Chuva Pulverização (%)</label>
+              <input 
+                id="precipitationProbThreshold"
+                type="number" 
+                bind:value={precipitationProbThreshold} 
+                step="0.01" 
+                min="0" 
+                max="1"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="fungalRiskHumidity">Umidade Risco Fúngico (%)</label>
+              <input 
+                id="fungalRiskHumidity"
+                type="number" 
+                bind:value={fungalRiskHumidity} 
+                step="1" 
+                min="0" 
+                max="100"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="fungalRiskTempMin">Temp. Mín. Risco Fúngico (°C)</label>
+              <input 
+                id="fungalRiskTempMin"
+                type="number" 
+                bind:value={fungalRiskTempMin} 
+                step="1" 
+                min="-10" 
+                max="50"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="fungalRiskTempMax">Temp. Máx. Risco Fúngico (°C)</label>
+              <input 
+                id="fungalRiskTempMax"
+                type="number" 
+                bind:value={fungalRiskTempMax} 
+                step="1" 
+                min="-10" 
+                max="50"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="frostTempThreshold">Temp. Geada (°C)</label>
+              <input 
+                id="frostTempThreshold"
+                type="number" 
+                bind:value={frostTempThreshold} 
+                step="1" 
+                min="-20" 
+                max="10"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="heatStressTempThreshold">Temp. Estresse Calor (°C)</label>
+              <input 
+                id="heatStressTempThreshold"
+                type="number" 
+                bind:value={heatStressTempThreshold} 
+                step="1" 
+                min="20" 
+                max="60"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="plantingTempMin">Temp. Mín. Plantio (°C)</label>
+              <input 
+                id="plantingTempMin"
+                type="number" 
+                bind:value={plantingTempMin} 
+                step="1" 
+                min="0" 
+                max="40"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="plantingTempMax">Temp. Máx. Plantio (°C)</label>
+              <input 
+                id="plantingTempMax"
+                type="number" 
+                bind:value={plantingTempMax} 
+                step="1" 
+                min="0" 
+                max="40"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="plantingRainProbThreshold">Chuva Plantio (%)</label>
+              <input 
+                id="plantingRainProbThreshold"
+                type="number" 
+                bind:value={plantingRainProbThreshold} 
+                step="0.01" 
+                min="0" 
+                max="1"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="harvestRainProbThreshold">Chuva Colheita (%)</label>
+              <input 
+                id="harvestRainProbThreshold"
+                type="number" 
+                bind:value={harvestRainProbThreshold} 
+                step="0.01" 
+                min="0" 
+                max="1"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="harvestHumidityThreshold">Umidade Colheita (%)</label>
+              <input 
+                id="harvestHumidityThreshold"
+                type="number" 
+                bind:value={harvestHumidityThreshold} 
+                step="1" 
+                min="0" 
+                max="100"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="irrigationNoRainThreshold">Chuva Irrigação (%)</label>
+              <input 
+                id="irrigationNoRainThreshold"
+                type="number" 
+                bind:value={irrigationNoRainThreshold} 
+                step="0.01" 
+                min="0" 
+                max="1"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="irrigationTempThreshold">Temp. Irrigação (°C)</label>
+              <input 
+                id="irrigationTempThreshold"
+                type="number" 
+                bind:value={irrigationTempThreshold} 
+                step="1" 
+                min="0" 
+                max="50"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="irrigationMinHours">Min. Horas Irrigação</label>
+              <input 
+                id="irrigationMinHours"
+                type="number" 
+                bind:value={irrigationMinHours} 
+                step="3" 
+                min="0" 
+                max="72"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <label for="minWindowHours">Min. Horas Janela</label>
+              <input 
+                id="minWindowHours"
+                type="number" 
+                bind:value={minWindowHours} 
+                step="3" 
+                min="0" 
+                max="72"
+                class="config-input"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção de Ação -->
+      <div class="action-section">
+        <button 
+          on:click={handleAnalyzeClick} 
+          disabled={!selectedCoords || isLoading}
+          class="analyze-button"
+        >
+          {#if isLoading}
+            <span class="loading-spinner"></span>
+            Analisando...
+          {:else}
+            Analisar Clima
+          {/if}
+        </button>
+
+        {#if apiResponse}
+          <button 
+            on:click={handlePrintReport} 
+            class="print-button"
+          >
+            Gerar Relatório PDF
+          </button>
+        {/if}
+      </div>
+
+      <!-- Seção de Resultados -->
       {#if isLoading}
-        Analisando...
-      {:else}
-        Analisar Clima
+        <div class="loading-section">
+          <div class="loading-spinner large"></div>
+          <p>Processando dados climáticos...</p>
+        </div>
       {/if}
-    </button>
-    {#if apiResponse}
-      <button on:click={handlePrintReport} class="print-button">
-        Imprimir Relatório (PDF)
-      </button>
-    {/if}
-  </section>
 
-  <section class="results-section">
-    {#if isLoading}
-      <div class="loading-text">Buscando e processando dados...</div>
-    {/if}
+      {#if errorMessage}
+        <div class="error-section">
+          <div class="error-icon">⚠️</div>
+          <p>{errorMessage}</p>
+        </div>
+      {/if}
 
-    {#if errorMessage}
-      <div class="error-box">{errorMessage}</div>
-    {/if}
+      {#if apiResponse}
+        <div class="results-section">
+          <div class="section-header">
+            <h2>Recomendações para os Próximos 5 Dias</h2>
+            <p>Análise detalhada das condições climáticas</p>
+          </div>
+          <Results insights={apiResponse} />
+        </div>
+      {/if}
+    </div>
+  </div>
 
-    {#if apiResponse}
-      <h2>3. Recomendações para os Próximos 5 Dias</h2>
-      <Results insights={apiResponse} />
-    {/if}
-  </section>
-
-  <footer>
-    <p>MVP v2 com Svelte e Leaflet.js</p>
+  <footer class="app-footer">
+    <div class="footer-content">
+      <p>MVP v2 com Svelte e Leaflet.js</p>
+      <p>Demeter - Inteligência Climática para o Agro</p>
+    </div>
   </footer>
-</main>
-
-<style>
-  :global(*, *::before, *::after) {
-    box-sizing: border-box;
-  }
-
-  :global(html, body) {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-  }
-
-  :global(body) {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    background-color: #f0f4f8;
-    color: #333;
-    min-height: 100vh; /* Garante que o body ocupe toda a altura da viewport */
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Centraliza o conteúdo horizontalmente */
-  }
-
-  main {
-    width: 100%; /* Garante que o main ocupe a largura total disponível */
-    max-width: 1200px; /* Largura máxima para telas grandes */
-    padding: 2rem;
-    background-color: #fff;
-    border-radius: 12px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-    min-width: 427px; /* Garante espaço suficiente para o layout de duas colunas */
-  }
-
-  /* Estilos para telas menores (celulares) */
-  @media (max-width: 768px) {
-    main {
-      width: 100%; /* Ocupa toda a largura em telas pequenas */
-      margin: 0; /* Remove margens laterais */
-      padding: 1rem; /* Reduz o padding */
-      border-radius: 0; /* Remove bordas arredondadas */
-      box-shadow: none; /* Remove sombra */
-      min-width: 395px; /* Garante espaço suficiente para o layout de duas colunas */
-    }
-
-    .input-coords {
-      flex-direction: column; /* Empilha inputs de lat/lon */
-    }
-
-    .call-to-action {
-      flex-direction: column; /* Empilha botões */
-      gap: 10px;
-    }
-
-    .print-button {
-      margin-left: 0; /* Remove margem do botão de imprimir */
-    }
-
-    
-  }
-
-  
-
-  header {
-    text-align: center;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 1.5rem;
-    margin-bottom: 2rem;
-    width: 100%; /* Garante que o header ocupe a largura total do main */
-  }
-
-  header h1 {
-    color: #2c5b2d;
-    margin: 0;
-    font-weight: 700;
-  }
-
-  header p {
-    margin: 5px 0 0;
-    color: #666;
-  }
-
-  section {
-    margin-bottom: 2rem;
-    width: 100%; /* Garante que as seções ocupem a largura total do main */
-  }
-
-  h2 {
-    color: #333;
-    font-weight: 700;
-    margin-top: 0;
-  }
-
-  .input-coords {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-  }
-
-  .input-coords input {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 1rem;
-  }
-
-  .or-text {
-    text-align: center;
-    margin-bottom: 15px;
-    color: #666;
-  }
-
-  .config-section {
-    background-color: #f9f9f9;
-    padding: 1.5rem;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
-    min-width: 363px;
-  }
-
-  .config-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-    min-width: 315px;
-  }
-
-  
-
-  .config-item {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .config-item label {
-    font-size: 0.9rem;
-    color: #555;
-    margin-bottom: 5px;
-  }
-
-  .config-item input[type="number"] {
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-  }
-
-  .call-to-action {
-    text-align: center;
-  }
-
-  button {
-    padding: 15px 30px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.1s ease;
-  }
-
-  button:hover:not(:disabled) {
-    background-color: #45a049;
-  }
-
-  button:active:not(:disabled) {
-    transform: scale(0.98);
-  }
-
-  button:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-  }
-
-  .print-button {
-    background-color: #007bff; /* Cor azul para o botão de imprimir */
-    margin-left: 10px;
-  }
-
-  .print-button:hover:not(:disabled) {
-    background-color: #0056b3;
-  }
-
-  .loading-text {
-    text-align: center;
-    padding: 2rem;
-    font-size: 1.1rem;
-    color: #666;
-  }
-
-  .error-box {
-    text-align: center;
-    padding: 1.5rem;
-    background-color: #ffebee;
-    color: #c62828;
-    border: 1px solid #c62828;
-    border-radius: 8px;
-  }
-
-  footer {
-    text-align: center;
-    margin-top: 3rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #e0e0e0;
-    font-size: 0.9rem;
-    color: #999;
-    width: 100%; /* Garante que o footer ocupe a largura total do main */
-  }
-</style>
+</div>
