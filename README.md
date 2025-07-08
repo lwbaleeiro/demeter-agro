@@ -9,78 +9,63 @@ This MVP was developed to solve a specific problem: generic weather forecasts ar
 - **Interactive Map:** Select your farm's precise location by clicking on a map.
 - **Spraying Window Alerts:** Identifies the best continuous time window (e.g., 48 hours) for spraying, based on wind speed and precipitation forecasts.
 - **Fungal Risk Alerts:** Warns you if the combination of temperature and humidity in the upcoming days is favorable for the development of common fungal diseases.
+- **PDF Report Generation:** Generate a printable PDF report of the analysis insights.
 - **Decoupled Architecture:** A modern frontend built with Svelte communicates with a powerful Python backend API.
 
 ## Tech Stack
 
 - **Backend:** Python 3, FastAPI, Uvicorn
-- **Frontend:** Svelte, Vite, TypeScript, Leaflet.js
+- **Frontend:** Svelte, Vite, TypeScript, Leaflet.js, jsPDF
 - **Data Source:** OpenWeatherMap 5-day/3-hour Forecast API
+- **Containerization:** Docker, Docker Compose
 
 ## Setup and Installation
 
 ### Prerequisites
 
-- Python 3.8+
-- Node.js and npm (or a compatible package manager)
+- Docker and Docker Compose
+- An OpenWeatherMap API Key (set as `OPENWEATHER_API_KEY` environment variable in your `.env` file)
 
-### 1. Backend Setup
+### 1. Environment Variables
 
-From the project root directory (`demeter/`):
+Create a `.env` file in the project root directory (`demeter/`) and add your OpenWeatherMap API key:
 
-```bash
-# 1. Install Python dependencies
-pip install -r requirements.txt
-
-# 2. Set your OpenWeatherMap API Key as a system environment variable.
-#    You can get a free API key from [OpenWeatherMap](https://openweathermap.org/).
-#
-#    On Windows (Command Prompt or PowerShell, run as Administrator):
-#    setx OPENWEATHER_API_KEY "YOUR_API_KEY_HERE"
-#
-#    Remember to replace "YOUR_API_KEY_HERE" with your actual key.
-#    After setting the variable, you might need to restart your terminal or IDE
-#    for the changes to take effect.
+```
+OPENWEATHER_API_KEY="YOUR_API_KEY_HERE"
 ```
 
-### 2. Frontend Setup
+Remember to replace `"YOUR_API_KEY_HERE"` with your actual key.
 
-Navigate to the frontend directory and install the Node.js dependencies:
+### 2. Build and Run with Docker Compose
 
-```bash
-# 1. Go to the frontend directory
-cd frontend
-
-# 2. Install dependencies
-npm install
-```
-
-## Running the Application
-
-You will need two separate terminals to run both the backend and frontend servers.
-
-**Terminal 1: Start the Backend**
-
-From the project root directory (`demeter/`):
+From the project root directory (`demeter/`), run the following commands:
 
 ```bash
-python -m uvicorn app.main:app --reload
+# Build the Docker images for both backend and frontend
+docker-compose build
+
+# Start the containers in detached mode
+docker-compose up -d
 ```
-The API will be running at `http://127.0.0.1:8000`.
 
-**Terminal 2: Start the Frontend**
+This will build the necessary Docker images and start both the backend (FastAPI) and frontend (Nginx serving Svelte) services.
 
-From the `frontend/` directory:
+- The backend will be accessible at `http://localhost:8000`.
+- The frontend will be accessible at `http://localhost:80`.
+
+### Stopping the Application
+
+To stop the running containers, from the project root directory:
 
 ```bash
-npm run dev
+docker-compose down
 ```
-The frontend development server will start, usually at `http://localhost:5173`.
 
 ## How to Use
 
-1.  Open the frontend URL (e.g., `http://localhost:5173`) in your browser.
+1.  Open the frontend URL (e.g., `http://localhost:80`) in your browser.
 2.  The application will display a map centered on Brazil.
 3.  Click anywhere on the map to place a marker on your desired location.
 4.  Click the "Analisar Clima" button.
 5.  The application will call the backend, process the forecast, and display the recommendation cards for spraying and fungal risk.
+6.  After analysis, click the "Imprimir Relatório (PDF)" button to generate a PDF report of the insights.

@@ -1,6 +1,7 @@
 <script lang="ts">
   import Map from './lib/Map.svelte';
   import Results from './lib/Results.svelte';
+  import { jsPDF } from 'jspdf';
 
   let latitudeInput: string = '';
   let longitudeInput: string = '';
@@ -170,6 +171,157 @@
     }
   }
 
+  function handlePrintReport() {
+    if (!apiResponse) {
+      alert('Nenhum dado de análise para imprimir.');
+      return;
+    }
+
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.text('Relatório de Análise Climática', 14, 22);
+
+    doc.setFontSize(12);
+    doc.text(`Localização: Latitude ${selectedCoords?.lat.toFixed(6)}, Longitude ${selectedCoords?.lon.toFixed(6)}`, 14, 32);
+    doc.text(`Perfil da Cultura: ${selectedCropProfile.charAt(0).toUpperCase() + selectedCropProfile.slice(1)}`, 14, 39);
+
+    let y = 50;
+
+    // Função auxiliar para adicionar texto com quebra de linha
+    const addText = (text: string, x: number, y: number, maxWidth: number) => {
+      const splitText = doc.splitTextToSize(text, maxWidth);
+      doc.text(splitText, x, y);
+      return y + (splitText.length * doc.getLineHeight() / doc.internal.scaleFactor);
+    };
+
+    // Insights de Pulverização
+    doc.setFontSize(14);
+    doc.text('1. Alerta de Pulverização', 14, y);
+    y += 7;
+    doc.setFontSize(10);
+    y = addText(apiResponse.spraying_alert.message, 14, y, 180);
+    if (apiResponse.spraying_alert.ideal_window_found) {
+      y = addText(`Início: ${apiResponse.spraying_alert.start_time}`, 18, y, 180);
+      y = addText(`Fim: ${apiResponse.spraying_alert.end_time}`, 18, y, 180);
+      y = addText(`Condições: ${apiResponse.spraying_alert.conditions}`, 18, y, 180);
+    }
+    y += 10;
+
+    // Risco Fúngico
+    doc.setFontSize(14);
+    doc.text('2. Risco Fúngico', 14, y);
+    y += 7;
+    doc.setFontSize(10);
+    y = addText(apiResponse.fungal_risk_alert.message, 14, y, 180);
+    if (apiResponse.fungal_risk_alert.risk_found && apiResponse.fungal_risk_alert.details) {
+      y = addText(`Detalhes: ${apiResponse.fungal_risk_alert.details}`, 18, y, 180);
+    }
+    y += 10;
+
+    // Alerta de Geada
+    doc.setFontSize(14);
+    doc.text('3. Alerta de Geada', 14, y);
+    y += 7;
+    doc.setFontSize(10);
+    y = addText(apiResponse.frost_alert.message, 14, y, 180);
+    if (apiResponse.frost_alert.frost_risk_found && apiResponse.frost_alert.details) {
+      y = addText('Períodos de risco:', 18, y, 180);
+      apiResponse.frost_alert.details.forEach((period: any) => {
+        y = addText(`- ${period.time}: ${period.temp_min}°C`, 22, y, 180);
+      });
+    }
+    y += 10;
+
+    // Estresse por Calor
+    doc.setFontSize(14);
+    doc.text('4. Estresse por Calor', 14, y);
+    y += 7;
+    doc.setFontSize(10);
+    y = addText(apiResponse.heat_stress_alert.message, 14, y, 180);
+    if (apiResponse.heat_stress_alert.heat_stress_found && apiResponse.heat_stress_alert.details) {
+      y = addText('Períodos de risco:', 18, y, 180);
+      apiResponse.heat_stress_alert.details.forEach((period: any) => {
+        y = addText(`- ${period.time}: ${period.temp_max}°C`, 22, y, 180);
+      });
+    }
+    y += 10;
+
+    // Janela de Plantio/Semeadura
+    doc.setFontSize(14);
+    doc.text('5. Janela de Plantio/Semeadura', 14, y);
+    y += 7;
+    doc.setFontSize(10);
+    y = addText(apiResponse.planting_window_alert.message, 14, y, 180);
+    if (apiResponse.planting_window_alert.planting_window_found && apiResponse.planting_window_alert.details) {
+      y = addText('Períodos ideais:', 18, y, 180);
+      apiResponse.planting_window_alert.details.forEach((period: any) => {
+        y = addText(`- ${period.time}: ${period.temp}°C, Chuva: ${(period.rain_prob * 100).toFixed(0)}%`, 22, y, 180);
+      });
+    }
+    y += 10;
+
+    // Janela de Colheita
+    doc.setFontSize(14);
+    doc.text('6. Janela de Colheita', 14, y);
+    y += 7;
+    doc.setFontSize(10);
+    y = addText(apiResponse.harvesting_window_alert.message, 14, y, 180);
+    if (apiResponse.harvesting_window_alert.harvesting_window_found && apiResponse.harvesting_window_alert.details) {
+      y = addText('Períodos ideais:', 18, y, 180);
+      apiResponse.harvesting_window_alert.details.forEach((window_period: any) => {
+        y = addText(`- ${window_period[0].time} a ${window_period[window_period.length - 1].time} (${window_period.length * 3}h)`, 22, y, 180);
+      });
+    }
+    y += 10;
+
+    // Recomendação de Irrigação
+    doc.setFontSize(14);
+    doc.text('7. Recomendação de Irrigação', 14, y);
+    y += 7;
+    doc.setFontSize(10);
+    y = addText(apiResponse.irrigation_recommendation.message, 14, y, 180);
+    if (apiResponse.irrigation_recommendation.irrigation_recommended && apiResponse.irrigation_recommendation.details) {
+      y = addText('Períodos de possível necessidade:', 18, y, 180);
+      apiResponse.irrigation_recommendation.details.forEach((window: any) => {
+        y = addText(`- ${window[0].time} a ${window[window.length - 1].time} (${window.length * 3}h) - Temp: ${window[0].temp}°C, Chuva: ${(window[0].rain_prob * 100).toFixed(0)}%`, 22, y, 180);
+      });
+    }
+    y += 10;
+
+    // Graus-Dia (GDD)
+    doc.setFontSize(14);
+    doc.text('8. Graus-Dia (GDD)', 14, y);
+    y += 7;
+    doc.setFontSize(10);
+    y = addText(apiResponse.gdd_insight.message, 14, y, 180);
+    if (apiResponse.gdd_insight.gdd_calculated) {
+      y = addText(`GDD Acumulado (5 dias): ${apiResponse.gdd_insight.total_gdd?.toFixed(2)}`, 18, y, 180);
+      y = addText('Detalhes por período:', 18, y, 180);
+      apiResponse.gdd_insight.details.forEach((period: any) => {
+        y = addText(`- ${period.date}: ${period.gdd_value?.toFixed(2)} GDD`, 22, y, 180);
+      });
+    }
+    y += 10;
+
+    // Adicionar nova página se necessário
+    if (y > 280) {
+      doc.addPage();
+      y = 20;
+    }
+
+    doc.save('relatorio_demeter.pdf');
+
+    // Adicionar rodapé em todas as páginas
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text('Demeter - Inteligência Climática para o Agro', doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+    }
+  }
+
   async function handleAnalyzeClick() {
     if (!selectedCoords) {
       alert('Por favor, insira coordenadas válidas ou clique no mapa para selecionar uma localização.');
@@ -323,6 +475,11 @@
         Analisar Clima
       {/if}
     </button>
+    {#if apiResponse}
+      <button on:click={handlePrintReport} class="print-button">
+        Imprimir Relatório (PDF)
+      </button>
+    {/if}
   </section>
 
   <section class="results-section">
@@ -468,6 +625,15 @@
   button:disabled {
     background-color: #ccc;
     cursor: not-allowed;
+  }
+
+  .print-button {
+    background-color: #007bff; /* Cor azul para o botão de imprimir */
+    margin-left: 10px;
+  }
+
+  .print-button:hover:not(:disabled) {
+    background-color: #0056b3;
   }
 
   .loading-text {
