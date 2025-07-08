@@ -124,7 +124,7 @@ def mps_to_kmh(mps: float) -> float:
     """Converte metros por segundo para quilômetros por hora."""
     return mps * 3.6
 
-def analyze_forecast(forecast_data: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
+def analyze_forecast(forecast_data: Dict[str, Any], historical_data: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Analisa os dados de previsão do tempo para gerar insights, usando configurações dinâmicas.
     """
@@ -169,7 +169,8 @@ def analyze_forecast(forecast_data: Dict[str, Any], config: Dict[str, Any]) -> D
     planting_window_alert = find_planting_window(forecast_list, planting_temp_min, planting_temp_max, planting_rain_prob_threshold)
     harvesting_window_alert = find_harvesting_window(forecast_list, harvest_rain_prob_threshold, harvest_humidity_threshold, min_window_hours)
     irrigation_recommendation = find_irrigation_recommendation(forecast_list, irrigation_no_rain_threshold, irrigation_temp_threshold, irrigation_min_hours)
-    gdd_insight = calculate_gdd(forecast_list, gdd_base_temp)
+    gdd_insight = calculate_gdd(historical_data, gdd_base_temp)
+    satellite_analysis = analyze_satellite_imagery(config.get('lat'), config.get('lon'))
 
     return {
         "spraying_alert": spraying_window,
@@ -179,7 +180,8 @@ def analyze_forecast(forecast_data: Dict[str, Any], config: Dict[str, Any]) -> D
         "planting_window_alert": planting_window_alert,
         "harvesting_window_alert": harvesting_window_alert,
         "irrigation_recommendation": irrigation_recommendation,
-        "gdd_insight": gdd_insight
+        "gdd_insight": gdd_insight,
+        "satellite_analysis": satellite_analysis
     }
 
 def find_spraying_window(forecast_list: List[Dict[str, Any]], wind_speed_threshold_ms: float, precipitation_prob_threshold: float, min_window_hours: float) -> Dict[str, Any]:
@@ -226,39 +228,58 @@ def find_spraying_window(forecast_list: List[Dict[str, Any]], wind_speed_thresho
 
 
 def find_fungal_risk_window(forecast_list: List[Dict[str, Any]], fungal_risk_humidity: float, fungal_risk_temp_min: float, fungal_risk_temp_max: float, min_window_hours: float) -> Dict[str, Any]:
-    """Encontra períodos de risco para doenças fúngicas."""
-    risk_periods = []
-    current_risk_window = []
+    """Analisa o risco fúngico calculando um escore com base na duração e intensidade das condições."""
+    total_risk_hours = 0
+    risk_score = 0.0
+
+    # A temperatura ótima para a maioria dos fungos está no meio da faixa de risco.
+    optimal_temp_midpoint = (fungal_risk_temp_min + fungal_risk_temp_max) / 2
+    temp_range = fungal_risk_temp_max - fungal_risk_temp_min
 
     for forecast in forecast_list:
         humidity = forecast["main"]["humidity"]
         temp = forecast["main"]["temp"]
 
         if humidity >= fungal_risk_humidity and fungal_risk_temp_min <= temp <= fungal_risk_temp_max:
-            current_risk_window.append(forecast)
-        else:
-            if len(current_risk_window) * 3 >= min_window_hours:
-                risk_periods.append(current_risk_window)
-            current_risk_window = []
+            total_risk_hours += 3
+            
+            # Ponderar o escore pela temperatura: mais pontos para temperaturas ótimas.
+            # A pontuação é maior quando a temperatura está mais próxima do ponto médio ótimo.
+            distance_from_optimal = abs(temp - optimal_temp_midpoint)
+            temp_score_factor = 1.0 - (distance_from_optimal / (temp_range / 2))
+            
+            # Ponderar pela umidade: umidade mais alta aumenta o risco.
+            humidity_score_factor = (humidity - fungal_risk_humidity) / (100 - fungal_risk_humidity)
+            
+            # O escore por período de 3h é uma combinação dos fatores de temp e umidade.
+            # O valor 1.5 é um peso para dar mais impacto às horas de risco.
+            risk_score += (1 + temp_score_factor + humidity_score_factor) * 1.5
 
-    if len(current_risk_window) * 3 >= min_window_hours:
-        risk_periods.append(current_risk_window)
+    # Normalizar o escore para uma escala de 0 a 100
+    # O máximo de horas é 120 (5 dias * 24h). O escore máximo teórico é ajustado.
+    max_possible_score = 120 / 3 * 3.5 # Ajustado para a fórmula acima
+    normalized_score = min(100.0, (risk_score / max_possible_score) * 100)
 
-    if not risk_periods:
-        return {
-            "risk_found": False,
-            "message": "Condições de baixo risco para doenças fúngicas nos próximos 5 dias."
-        }
+    # Definir níveis de risco com base no escore normalizado
+    if normalized_score >= 75:
+        risk_level = "Severo"
+        message = f"Risco Severo! {total_risk_hours}h de condições favoráveis para fungos. Aja preventivamente."
+    elif normalized_score >= 50:
+        risk_level = "Alto"
+        message = f"Risco Alto! {total_risk_hours}h de condições favoráveis para fungos. Monitore a lavoura."
+    elif normalized_score >= 25:
+        risk_level = "Moderado"
+        message = f"Risco Moderado. {total_risk_hours}h de condições favoráveis para fungos. Fique atento."
+    else:
+        risk_level = "Baixo"
+        message = "Condições de baixo risco para doenças fúngicas nos próximos 5 dias."
 
-    first_risk = risk_periods[0]
-    start_time = datetime.fromtimestamp(first_risk[0]["dt"]).strftime('%d/%m %H:%M')
-    
-    total_risk_hours = sum(len(p) for p in risk_periods) * 3
-    
     return {
-        "risk_found": True,
-        "message": f"Atenção! {total_risk_hours} horas com condições favoráveis para fungos detectadas. Primeiro período de risco começa em {start_time}.",
-        "details": f"Condições de risco: Umidade > {fungal_risk_humidity}% e Temperatura entre {fungal_risk_temp_min}°C e {fungal_risk_temp_max}°C."
+        "risk_level": risk_level,
+        "risk_score": round(normalized_score, 2),
+        "message": message,
+        "total_risk_hours": total_risk_hours,
+        "details": f"Análise baseada em umidade > {fungal_risk_humidity}% e temp. entre {fungal_risk_temp_min}°C e {fungal_risk_temp_max}°C."
     }
 
 def find_frost_risk(forecast_list: List[Dict[str, Any]], frost_temp_threshold: float) -> Dict[str, Any]:
@@ -391,46 +412,70 @@ def find_harvesting_window(forecast_list: List[Dict[str, Any]], harvest_rain_pro
             "details": ideal_periods
         }
 
+def calculate_gdd(historical_data: Dict[str, Any], base_temp: float) -> Dict[str, Any]:
+    """Calcula os Graus-Dia (GDD) acumulados com base nos dados históricos."""
+    if not historical_data or 'daily' not in historical_data or not all(k in historical_data['daily'] for k in ['time', 'temperature_2m_max', 'temperature_2m_min']):
+        return {
+            "gdd_calculated": False,
+            "message": "Dados históricos insuficientes ou em formato inválido para calcular GDD."
+        }
 
-def calculate_gdd(forecast_list: List[Dict[str, Any]], base_temp: float) -> Dict[str, Any]:
-    """Calcula os Graus-Dia (GDD) acumulados para os próximos 5 dias."""
     total_gdd = 0.0
     gdd_details = []
 
-    # Agrupar previsões por dia para calcular a temperatura média diária
-    daily_temps: Dict[str, List[float]] = {}
-    for forecast in forecast_list:
-        date_str = datetime.fromtimestamp(forecast["dt"]).strftime('%Y-%m-%d')
-        if date_str not in daily_temps:
-            daily_temps[date_str] = []
-        daily_temps[date_str].append(forecast["main"]["temp"])
+    dates = historical_data['daily']['time']
+    temp_max_list = historical_data['daily']['temperature_2m_max']
+    temp_min_list = historical_data['daily']['temperature_2m_min']
 
-    for date_str, temps in daily_temps.items():
-        if not temps: # Evita divisão por zero
-            continue
-        
-        # Usar a temperatura média diária
-        avg_daily_temp = sum(temps) / len(temps)
-        
-        # Fórmula do GDD: (Temp_max + Temp_min) / 2 - Temp_base
-        # Como temos previsões de 3 em 3 horas, usaremos a média diária como proxy
-        # E garantimos que o GDD não seja negativo
-        gdd_value = max(0.0, avg_daily_temp - base_temp)
+    for i, date_str in enumerate(dates):
+        temp_max = temp_max_list[i]
+        temp_min = temp_min_list[i]
+
+        # Fórmula padrão do GDD
+        avg_temp = (temp_max + temp_min) / 2
+        gdd_value = max(0.0, avg_temp - base_temp)
         total_gdd += gdd_value
         gdd_details.append({"date": date_str, "gdd_value": gdd_value})
 
     if total_gdd > 0:
         return {
             "gdd_calculated": True,
-            "message": f"GDD acumulado para os próximos 5 dias: {total_gdd:.2f}.",
+            "message": f"GDD acumulado nos últimos {len(dates)} dias: {total_gdd:.2f}.",
             "total_gdd": total_gdd,
             "details": gdd_details
         }
     else:
         return {
             "gdd_calculated": False,
-            "message": "Nenhum GDD acumulado significativo previsto nos próximos 5 dias."
+            "message": f"Nenhum GDD acumulado nos últimos {len(dates)} dias (Temp. Base: {base_temp}°C)."
         }
+
+def analyze_satellite_imagery(lat: float, lon: float) -> Dict[str, Any]:
+    """
+    [SIMULADO] Analisa imagens de satélite para NDVI.
+    Retorna dados de exemplo realistas.
+    """
+    # Em uma implementação real, esta função se conectaria a uma API como a do Google Earth Engine.
+    # A simulação retorna um resultado positivo para demonstrar a funcionalidade no frontend.
+    
+    # O NDVI varia de -1 a 1. Valores acima de 0.6 geralmente indicam vegetação saudável.
+    ndvi_value = round(0.65 + (lat + lon) % 0.2, 2) # Valor de exemplo pseudo-aleatório
+    
+    message = f"NDVI de {ndvi_value} indica vegetação vigorosa. "
+    if ndvi_value > 0.75:
+        message += "A saúde da cultura parece excelente."
+    elif ndvi_value > 0.6:
+        message += "A saúde da cultura parece boa, sem sinais de estresse hídrico ou de pragas."
+    else:
+        message += "Pode haver áreas de estresse que merecem investigação."
+
+    return {
+        "available": True,
+        "message": message,
+        "ndvi_value": ndvi_value,
+        # URL de uma imagem de satélite de exemplo (região agrícola)
+        "image_url": f"https://source.unsplash.com/800x600/?farm,field,satellite"
+    }
 
 def find_irrigation_recommendation(forecast_list: List[Dict[str, Any]], irrigation_no_rain_threshold: float, irrigation_temp_threshold: float, irrigation_min_hours: float) -> Dict[str, Any]:
     """Verifica a necessidade de irrigação nos próximos 5 dias."""

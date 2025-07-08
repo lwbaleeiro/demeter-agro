@@ -3,16 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from .schemas import FarmLocation, DemeterInsight, AnalysisConfig
 from . import services
 from . import logic
+import asyncio
 
 app = FastAPI(
     title="Demeter - Inteligência Climática para o Agro",
     description="API para traduzir dados climáticos em insights acionáveis para agricultores.",
-    version="0.1.0"
+    version="0.2.0" # Versão atualizada para refletir a nova funcionalidade
 )
 
 # --- Configuração do CORS ---
-# Permite que o frontend (rodando em qualquer origem) se comunique com a API.
-# Para produção, seria mais restritivo (ex: origins=["http://demeter.app"])
 origins = ["*"]
 
 app.add_middleware(
@@ -32,14 +31,25 @@ def read_root():
 async def get_demeter_insights(location: FarmLocation, config: AnalysisConfig = Depends(AnalysisConfig)):
     """
     Endpoint principal. Recebe a localização e retorna os insights acionáveis.
-    Permite configurar os limiares de análise.
+    Agora busca tanto a previsão do tempo quanto dados históricos em paralelo.
     """
-    forecast_data = await services.get_forecast_data(lat=location.lat, lon=location.lon)
+    # Busca os dados de previsão e históricos em paralelo para mais eficiência
+    forecast_task = services.get_forecast_data(lat=location.lat, lon=location.lon)
+    historical_task = services.get_historical_weather_data(lat=location.lat, lon=location.lon)
+    
+    results = await asyncio.gather(forecast_task, historical_task)
+    
+    forecast_data, historical_data = results
     
     if forecast_data.get("error"):
         raise HTTPException(status_code=500, detail=forecast_data.get("error"))
+    
+    # O erro nos dados históricos é tratado dentro da lógica para não quebrar a análise principal
+    if historical_data.get("error"):
+        print(f"Alerta: Não foi possível obter dados históricos. {historical_data.get('error')}")
 
-    insights = logic.analyze_forecast(forecast_data, config.model_dump())
+    # A função de análise agora recebe ambos os conjuntos de dados
+    insights = logic.analyze_forecast(forecast_data, historical_data, config.model_dump() | {"lat": location.lat, "lon": location.lon})
     
     if insights.get("error"):
         raise HTTPException(status_code=500, detail=insights.get("error"))

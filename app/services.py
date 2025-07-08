@@ -1,8 +1,11 @@
 import httpx
 from .config import settings
+from datetime import datetime, timedelta
 
 # Documentação da API 5 day / 3 hour: https://openweathermap.org/forecast5
-API_URL = "http://api.openweathermap.org/data/2.5/forecast"
+FORECAST_API_URL = "http://api.openweathermap.org/data/2.5/forecast"
+HISTORICAL_API_URL = "https://api.open-meteo.com/v1/forecast"
+
 
 async def get_forecast_data(lat: float, lon: float) -> dict:
     """
@@ -18,7 +21,7 @@ async def get_forecast_data(lat: float, lon: float) -> dict:
     
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(API_URL, params=params)
+            response = await client.get(FORECAST_API_URL, params=params)
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
@@ -30,3 +33,28 @@ async def get_forecast_data(lat: float, lon: float) -> dict:
         except Exception as e:
             print(f"Ocorreu um erro inesperado: {e}")
             return {"error": "Ocorreu um erro inesperado no servidor."}
+
+async def get_historical_weather_data(lat: float, lon: float, days: int = 5) -> dict:
+    """
+    Busca dados históricos de temperatura (máx e mín) dos últimos 'days' dias.
+    Usa a API Open-Meteo, que não requer chave.
+    """
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "past_days": days,
+        "daily": "temperature_2m_max,temperature_2m_min",
+        "timezone": "auto"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(HISTORICAL_API_URL, params=params)
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            print(f"Erro ao chamar a API do Open-Meteo: {e}")
+            return {"error": f"Não foi possível obter os dados históricos do tempo (Erro: {e.response.status_code})."}
+        except Exception as e:
+            print(f"Ocorreu um erro inesperado ao buscar dados históricos: {e}")
+            return {"error": "Ocorreu um erro inesperado no servidor ao buscar dados históricos."}

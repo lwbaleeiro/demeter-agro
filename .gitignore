@@ -5,3 +5,6 @@ app/__pycache__/config.cpython-310.pyc
 app/__pycache__/main.cpython-310.pyc
 app/__pycache__/schemas.cpython-310.pyc
 app/__pycache__/services.cpython-310.pyc
+app/__pycache__/logic.cpython-313.pyc
+app/__pycache__/schemas.cpython-313.pyc
+app/__pycache__/services.cpython-313.pyc

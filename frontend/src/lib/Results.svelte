@@ -1,12 +1,17 @@
 <script lang="ts">
     export let insights: any; // The full API response
 
-    function getCardClass(alert: any, type: 'spraying' | 'fungal' | 'frost' | 'heat_stress' | 'planting_window' | 'harvesting_window' | 'irrigation_recommendation' | 'gdd_insight') {
+    function getCardClass(alert: any, type: 'spraying' | 'fungal' | 'frost' | 'heat_stress' | 'planting_window' | 'harvesting_window' | 'irrigation_recommendation' | 'gdd_insight' | 'satellite') {
         if (type === 'spraying') {
             return alert.ideal_window_found ? 'positive' : 'negative';
         }
         if (type === 'fungal') {
-            return !alert.risk_found ? 'positive' : 'negative';
+            const level = alert.risk_level.toLowerCase();
+            if (level === 'baixo') return 'positive';
+            if (level === 'moderado') return 'warning';
+            if (level === 'alto') return 'negative';
+            if (level === 'severo') return 'severe';
+            return '';
         }
         if (type === 'frost') {
             return !alert.frost_risk_found ? 'positive' : 'negative';
@@ -24,9 +29,19 @@
             return !alert.irrigation_recommended ? 'positive' : 'negative';
         }
         if (type === 'gdd_insight') {
-            return alert.gdd_calculated ? 'positive' : 'negative'; // GDD calculado é sempre positivo
+            return 'info'; // GDD is informational
+        }
+        if (type === 'satellite') {
+            return 'info';
         }
         return '';
+    }
+
+    function getRiskColor(score: number): string {
+        if (score < 25) return '#4CAF50'; // Verde
+        if (score < 50) return '#FFC107'; // Amarelo
+        if (score < 75) return '#FF9800'; // Laranja
+        return '#F44336'; // Vermelho
     }
 
     function formatIrrigationDetails(details: any[]) {
@@ -44,6 +59,53 @@
 
 {#if insights}
     <div class="insights-grid">
+        <!-- Satellite Analysis Card (Featured) -->
+        {#if insights.satellite_analysis && insights.satellite_analysis.available}
+            <div class="insight-card satellite-card {getCardClass(insights.satellite_analysis, 'satellite')}">
+                <h3>Análise de Satélite (NDVI)</h3>
+                <div class="satellite-content">
+                    <div class="satellite-image-container">
+                        <img src={insights.satellite_analysis.image_url} alt="Imagem de Satélite da Área" class="satellite-image"/>
+                    </div>
+                    <div class="satellite-details">
+                        <p class="ndvi-value">NDVI: {insights.satellite_analysis.ndvi_value}</p>
+                        <p>{insights.satellite_analysis.message}</p>
+                    </div>
+                </div>
+            </div>
+        {/if}
+
+        <!-- GDD Insight Card (Featured) -->
+        {#if insights.gdd_insight && insights.gdd_insight.gdd_calculated}
+            <div class="insight-card gdd-card {getCardClass(insights.gdd_insight, 'gdd_insight')}">
+                <h3>Graus-Dia Acumulados (GDD)</h3>
+                <p>{insights.gdd_insight.message}</p>
+                <div class="gdd-total">
+                    {insights.gdd_insight.total_gdd?.toFixed(2)}
+                </div>
+                <p class="details">GDD é uma medida do acúmulo de calor, essencial para prever estágios de desenvolvimento da cultura.</p>
+                <p class="details"><strong>Detalhes por dia:</strong></p>
+                <ul>
+                    {#each insights.gdd_insight.details as period}
+                        <li>{new Date(period.date + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})}: <strong>{period.gdd_value?.toFixed(2)} GDD</strong></li>
+                    {/each}
+                </ul>
+            </div>
+        {/if}
+
+        <!-- Fungal Risk Card -->
+        <div class="insight-card {getCardClass(insights.fungal_risk_alert, 'fungal')}">
+            <h3>Risco Fúngico: <span class="risk-level">{insights.fungal_risk_alert.risk_level}</span></h3>
+            <div class="risk-bar-container">
+                <div 
+                    class="risk-bar"
+                    style="width: {insights.fungal_risk_alert.risk_score}%; background-color: {getRiskColor(insights.fungal_risk_alert.risk_score)};"
+                ></div>
+            </div>
+            <p>{insights.fungal_risk_alert.message}</p>
+            <p class="details">{insights.fungal_risk_alert.details}</p>
+        </div>
+
         <!-- Spraying Alert Card -->
         <div class="insight-card {getCardClass(insights.spraying_alert, 'spraying')}">
             <h3>Alerta de Pulverização</h3>
@@ -52,15 +114,6 @@
                 <p class="details"><strong>Início:</strong> {insights.spraying_alert.start_time}</p>
                 <p class="details"><strong>Fim:</strong> {insights.spraying_alert.end_time}</p>
                 <p class="details"><strong>Condições:</strong> {insights.spraying_alert.conditions}</p>
-            {/if}
-        </div>
-
-        <!-- Fungal Risk Card -->
-        <div class="insight-card {getCardClass(insights.fungal_risk_alert, 'fungal')}">
-            <h3>Risco Fúngico</h3>
-            <p>{insights.fungal_risk_alert.message}</p>
-            {#if insights.fungal_risk_alert.risk_found}
-                <p class="details">{insights.fungal_risk_alert.details}</p>
             {/if}
         </div>
 
@@ -131,55 +184,99 @@
                 </ul>
             {/if}
         </div>
-
-        <!-- GDD Insight Card -->
-        <div class="insight-card {getCardClass(insights.gdd_insight, 'gdd_insight')}">
-            <h3>Graus-Dia (GDD)</h3>
-            <p>{insights.gdd_insight.message}</p>
-            {#if insights.gdd_insight.gdd_calculated}
-                <p class="details">GDD Acumulado (5 dias): {insights.gdd_insight.total_gdd?.toFixed(2)}</p>
-                <p class="details">Detalhes por período:</p>
-                <ul>
-                    {#each insights.gdd_insight.details as period}
-                        <li>{period.date}: {period.gdd_value?.toFixed(2)} GDD</li>
-                    {/each}
-                </ul>
-            {/if}
-        </div>
     </div>
 {/if}
 
 <style>
     .insights-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
         margin-top: 2rem;
     }
 
     .insight-card {
-        padding: 20px;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #e0e0e0;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .insight-card.positive { background-color: #e8f5e9; border-left: 5px solid #4CAF50; }
+    .insight-card.warning { background-color: #fffde7; border-left: 5px solid #FFC107; }
+    .insight-card.negative { background-color: #fff3e0; border-left: 5px solid #FF9800; }
+    .insight-card.severe { background-color: #ffebee; border-left: 5px solid #F44336; }
+    .insight-card.info { background-color: #e3f2fd; border-left: 5px solid #2196F3; }
+
+    .gdd-card, .satellite-card {
+        grid-column: 1 / -1; 
+    }
+
+    .satellite-content {
+        display: flex;
+        gap: 1.5rem;
+        align-items: center;
+    }
+
+    .satellite-image-container {
+        flex: 1;
+        max-width: 40%;
+    }
+
+    .satellite-image {
+        width: 100%;
+        height: auto;
         border-radius: 8px;
-        border-left: 5px solid;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
 
-    .insight-card.positive {
-        background-color: #e8f5e9;
-        border-color: #4CAF50;
+    .satellite-details {
+        flex: 1.5;
     }
 
-    .insight-card.negative {
-        background-color: #fff3e0;
-        border-color: #ff9800;
+    .ndvi-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2196F3;
+    }
+
+    .gdd-total {
+        font-size: 3rem;
+        font-weight: 700;
+        color: #2196F3;
+        margin: 1rem 0;
     }
 
     .insight-card h3 {
         margin-top: 0;
-        font-size: 1.2rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .risk-level {
+        font-weight: 700;
+    }
+
+    .risk-bar-container {
+        width: 100%;
+        height: 10px;
+        background-color: #e0e0e0;
+        border-radius: 5px;
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+
+    .risk-bar {
+        height: 100%;
+        border-radius: 5px;
+        transition: width 0.5s ease-out;
     }
 
     .insight-card p {
-        margin-bottom: 5px;
+        margin-bottom: 0.5rem;
     }
 
     .details {
@@ -190,18 +287,20 @@
     ul {
         list-style-type: none;
         padding: 0;
-        margin: 0;
+        margin-top: 0.5rem;
     }
 
     li {
         font-size: 0.9rem;
-        opacity: 0.8;
-        margin-bottom: 3px;
+        margin-bottom: 0.25rem;
     }
 
-    @media (max-width: 700px) {
-        .insights-grid {
-            grid-template-columns: 1fr;
+    @media (max-width: 768px) {
+        .satellite-content {
+            flex-direction: column;
+        }
+        .satellite-image-container {
+            max-width: 100%;
         }
     }
 </style>

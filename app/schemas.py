@@ -54,8 +54,10 @@ class SprayingAlert(BaseModel):
     conditions: Optional[str] = None
 
 class FungalRiskAlert(BaseModel):
-    risk_found: bool
+    risk_level: str # Ex: "Baixo", "Moderado", "Alto"
+    risk_score: float # Um valor numérico de 0 a 100
     message: str
+    total_risk_hours: int
     details: Optional[str] = None
 
 class FrostPeriod(BaseModel):
@@ -113,6 +115,12 @@ class GDDInsight(BaseModel):
     total_gdd: Optional[float] = None
     details: Optional[List[Dict[str, Any]]] = None
 
+class SatelliteAnalysis(BaseModel):
+    available: bool
+    message: str
+    ndvi_value: Optional[float] = None
+    image_url: Optional[str] = None
+
 class DemeterInsight(BaseModel):
     spraying_alert: SprayingAlert
     fungal_risk_alert: FungalRiskAlert
@@ -122,3 +130,4 @@ class DemeterInsight(BaseModel):
     harvesting_window_alert: HarvestingWindowAlert
     irrigation_recommendation: IrrigationRecommendation
     gdd_insight: GDDInsight
+    satellite_analysis: SatelliteAnalysis
