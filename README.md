@@ -1,9 +1,8 @@
 # Demeter - Climate Intelligence for Agriculture
 
 ```
-python -m arq app.worker.WorkerSettings
 python -m uvicorn app.main:app --reload
-
+python -m arq app.worker.WorkerSettings
 ```
 
 Demeter is a web application that translates raw weather forecast data into simple, actionable insights for farmers. Instead of just showing temperature and rain predictions, it provides specific alerts for optimal spraying windows and fungal disease risks.

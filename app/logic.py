@@ -170,8 +170,6 @@ def analyze_forecast(forecast_data: Dict[str, Any], historical_data: Dict[str, A
     harvesting_window_alert = find_harvesting_window(forecast_list, harvest_rain_prob_threshold, harvest_humidity_threshold, min_window_hours)
     irrigation_recommendation = find_irrigation_recommendation(forecast_list, irrigation_no_rain_threshold, irrigation_temp_threshold, irrigation_min_hours)
     gdd_insight = calculate_gdd(historical_data, gdd_base_temp)
-    satellite_analysis = analyze_satellite_imagery(config.get('lat'), config.get('lon'))
-
     return {
         "spraying_alert": spraying_window,
         "fungal_risk_alert": fungal_risk,
@@ -180,8 +178,7 @@ def analyze_forecast(forecast_data: Dict[str, Any], historical_data: Dict[str, A
         "planting_window_alert": planting_window_alert,
         "harvesting_window_alert": harvesting_window_alert,
         "irrigation_recommendation": irrigation_recommendation,
-        "gdd_insight": gdd_insight,
-        "satellite_analysis": satellite_analysis
+        "gdd_insight": gdd_insight
     }
 
 def find_spraying_window(forecast_list: List[Dict[str, Any]], wind_speed_threshold_ms: float, precipitation_prob_threshold: float, min_window_hours: float) -> Dict[str, Any]:
@@ -450,32 +447,7 @@ def calculate_gdd(historical_data: Dict[str, Any], base_temp: float) -> Dict[str
             "message": f"Nenhum GDD acumulado nos últimos {len(dates)} dias (Temp. Base: {base_temp}°C)."
         }
 
-def analyze_satellite_imagery(lat: float, lon: float) -> Dict[str, Any]:
-    """
-    [SIMULADO] Analisa imagens de satélite para NDVI.
-    Retorna dados de exemplo realistas.
-    """
-    # Em uma implementação real, esta função se conectaria a uma API como a do Google Earth Engine.
-    # A simulação retorna um resultado positivo para demonstrar a funcionalidade no frontend.
-    
-    # O NDVI varia de -1 a 1. Valores acima de 0.6 geralmente indicam vegetação saudável.
-    ndvi_value = round(0.65 + (lat + lon) % 0.2, 2) # Valor de exemplo pseudo-aleatório
-    
-    message = f"NDVI de {ndvi_value} indica vegetação vigorosa. "
-    if ndvi_value > 0.75:
-        message += "A saúde da cultura parece excelente."
-    elif ndvi_value > 0.6:
-        message += "A saúde da cultura parece boa, sem sinais de estresse hídrico ou de pragas."
-    else:
-        message += "Pode haver áreas de estresse que merecem investigação."
 
-    return {
-        "available": True,
-        "message": message,
-        "ndvi_value": ndvi_value,
-        # URL de uma imagem de satélite de exemplo (região agrícola)
-        "image_url": f"https://source.unsplash.com/800x600/?farm,field,satellite"
-    }
 
 def find_irrigation_recommendation(forecast_list: List[Dict[str, Any]], irrigation_no_rain_threshold: float, irrigation_temp_threshold: float, irrigation_min_hours: float) -> Dict[str, Any]:
     """Verifica a necessidade de irrigação nos próximos 5 dias."""

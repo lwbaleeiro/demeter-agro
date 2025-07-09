@@ -1,13 +1,12 @@
-import asyncio
 import ee
+import json
+from datetime import datetime, timedelta
 from arq.connections import RedisSettings
 from .config import settings
 
-async def initialize_goolge_earth_engine(ctx):
+async def initialize_google_earth_engine(ctx):
     """Autentica e inicializa a sessão com o Google Earth Engine."""
     try:
-        # A autenticação acontece automaticamente se a variável de ambiente
-        # GOOGLE_APPLICATION_CREDENTIALS estiver configurada com o caminho para o seu JSON.
         ee.Initialize(project=settings.GOOGLE_PROJECT_ID)
         print("Google Earth Engine inicializado com sucesso.")
     except Exception as e:
@@ -18,17 +17,20 @@ async def analyze_satellite_image(ctx, lat: float, lon: float):
     """
     Tarefa de fundo (ARQ) para analisar a imagem de satélite.
     """
-    await initialize_goolge_earth_engine(ctx)
+    await initialize_google_earth_engine(ctx)
 
-    # Lógica para buscar a imagem e calcular o NDVI
-    # (Esta é uma implementação de exemplo e pode precisar de ajustes)
     point = ee.Geometry.Point(lon, lat)
+    print("ee point>>" + str(point))
     
+    # Definir o período de busca (últimos 30 dias)
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=30)
+
     # Usar a coleção de imagens do Sentinel-2
     collection = (
         ee.ImageCollection('COPERNICUS/S2_SR')
         .filterBounds(point)
-        .filterDate('2023-01-01', '2023-12-31') # Exemplo de intervalo de datas
+        .filterDate(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
         .sort('CLOUDY_PIXEL_PERCENTAGE')
         .limit(1)
     )
@@ -45,12 +47,12 @@ async def analyze_satellite_image(ctx, lat: float, lon: float):
         scale=10
     ).get('NDVI').getInfo()
 
-    # Simulação de uma URL de imagem (em um caso real, você geraria e armazenaria a imagem)
+    # Gerar URL da imagem de thumbnail
     image_url = image.getThumbUrl({
         'bands': ['B4', 'B3', 'B2'], # RGB
         'min': 0,
         'max': 3000,
-        'region': point.buffer(500).bounds().getInfo()['coordinates']
+        'region': point.buffer(500).bounds().getInfo()
     })
 
     result = {
@@ -58,12 +60,12 @@ async def analyze_satellite_image(ctx, lat: float, lon: float):
         "image_url": image_url
     }
 
-    # Armazenar o resultado no Redis usando o job_id como chave
-    await ctx['redis'].set(ctx['job_id'], str(result), ex=3600) # Expira em 1 hora
+    # Armazenar o resultado no Redis usando o job_id como chave, como JSON
+    await ctx['redis'].set(ctx['job_id'], json.dumps(result), ex=3600) # Expira em 1 hora
     return result
 
 
 class WorkerSettings:
     functions = [analyze_satellite_image]
-    on_startup = initialize_goolge_earth_engine
+    on_startup = initialize_google_earth_engine
     redis_settings = RedisSettings.from_dsn(settings.REDIS_DSN)

@@ -120,20 +120,17 @@ async def get_satellite_analysis_result(task_id: str):
     if not redis_pool:
         raise HTTPException(status_code=500, detail="Redis pool not initialized.")
 
-    job = await redis_pool.get_job(task_id)
+    result_json = await redis_pool.get(task_id)
 
-    if not job:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada.")
-
-    if not job.is_finished:
+    if not result_json:
+        # If the job is not yet finished, or if it failed and the result was not stored
+        # We can't check job.is_finished or job.is_failed directly with arq 0.26.3
+        # So we assume it's still processing if no result is found.
         raise HTTPException(status_code=status.HTTP_202_ACCEPTED, detail="Análise em processamento.")
 
-    if job.is_failed:
-        raise HTTPException(status_code=500, detail=f"Análise falhou: {job.result}")
-
-    # O resultado do job é uma string JSON que precisa ser desserializada
+    # The result of the job is a JSON string that needs to be deserialized
     try:
-        result_data = json.loads(job.result)
+        result_data = json.loads(result_json)
         return SatelliteAnalysis(
             available=True,
             message="Análise de satélite concluída.",
