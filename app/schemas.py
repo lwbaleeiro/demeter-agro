@@ -6,7 +6,7 @@ class FarmLocation(BaseModel):
     lon: float
 
 class AnalysisConfig(BaseModel):
-    crop_profile: Optional[str] = None # Novo campo para o perfil da cultura
+    crop_profile: Optional[str] = None
 
     # Pulverização
     wind_speed_threshold_ms: float = Field(2.8, description="Limite de velocidade do vento para pulverização em m/s (aprox. 10 km/h)")
@@ -54,8 +54,8 @@ class SprayingAlert(BaseModel):
     conditions: Optional[str] = None
 
 class FungalRiskAlert(BaseModel):
-    risk_level: str # Ex: "Baixo", "Moderado", "Alto"
-    risk_score: float # Um valor numérico de 0 a 100
+    risk_level: str 
+    risk_score: float
     message: str
     total_risk_hours: int
     details: Optional[str] = None
@@ -97,7 +97,7 @@ class HarvestingPeriod(BaseModel):
 class HarvestingWindowAlert(BaseModel):
     harvesting_window_found: bool
     message: str
-    details: Optional[List[List[HarvestingPeriod]]] = None # Lista de listas para janelas contínuas
+    details: Optional[List[List[HarvestingPeriod]]] = None
 
 class IrrigationPeriod(BaseModel):
     time: str
@@ -107,7 +107,7 @@ class IrrigationPeriod(BaseModel):
 class IrrigationRecommendation(BaseModel):
     irrigation_recommended: bool
     message: str
-    details: Optional[List[List[IrrigationPeriod]]] = None # Lista de listas para janelas contínuas
+    details: Optional[List[List[IrrigationPeriod]]] = None
 
 class GDDInsight(BaseModel):
     gdd_calculated: bool

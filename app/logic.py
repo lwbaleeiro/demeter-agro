@@ -336,7 +336,7 @@ def find_frost_risk(forecast_list: List[Dict[str, Any]], frost_temp_threshold: f
         first_frost_time = frost_periods[0]["time"]
         return {
             "frost_risk_found": True,
-            "message": f"Atenção! Risco de geada detectado. Temperatura mínima de {frost_periods[0]["temp_min"]}°C prevista para {first_frost_time}.",
+            "message": f"Atenção! Risco de geada detectado. Temperatura mínima de {frost_periods[0]['temp_min']}°C prevista para {first_frost_time}.",
             "details": frost_periods
         }
 
@@ -360,7 +360,7 @@ def find_heat_stress_risk(forecast_list: List[Dict[str, Any]], heat_stress_temp_
         first_stress_time = heat_stress_periods[0]["time"]
         return {
             "heat_stress_found": True,
-            "message": f"Atenção! Risco de estresse por calor detectado. Temperatura máxima de {heat_stress_periods[0]["temp_max"]}°C prevista para {first_stress_time}.",
+            "message": f"Atenção! Risco de estresse por calor detectado. Temperatura máxima de {heat_stress_periods[0]['temp_max']}°C prevista para {first_stress_time}.",
             "details": heat_stress_periods
         }
 
