@@ -2,3 +2,7 @@ fastapi
 uvicorn[standard]
 httpx
 pydantic-settings
+arq
+redis
+google-api-python-client
+earthengine-api

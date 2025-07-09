@@ -10,6 +10,12 @@
   let apiResponse: any = null;
   let errorMessage: string | null = null;
 
+  // Variáveis para o polling da análise de satélite
+  let satelliteAnalysisTaskId: string | null = null;
+  let satelliteAnalysisStatus: 'idle' | 'processing' | 'completed' | 'failed' = 'idle';
+  let satelliteAnalysisResult: any = null;
+  let pollingInterval: any = null;
+
   // Variáveis para os limiares configuráveis (com valores padrão)
   let windSpeedThresholdMs: number = 2.8; // Pulverização
   let precipitationProbThreshold: number = 0.1; // Pulverização
@@ -150,7 +156,7 @@
   // Reage à mudança do perfil selecionado
   $: selectedCropProfile, applyCropProfile();
 
-  const API_URL = 'http://127.0.0.1:8000/insights/';
+  const API_BASE_URL = 'http://127.0.0.1:8000';
 
   function handleLocationSelect(event: CustomEvent) {
     const { lat, lon } = event.detail;
@@ -335,9 +341,16 @@
     isLoading = true;
     apiResponse = null;
     errorMessage = null;
+    satelliteAnalysisStatus = 'idle';
+    satelliteAnalysisResult = null;
+    satelliteAnalysisTaskId = null;
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      pollingInterval = null;
+    }
 
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch(`${API_BASE_URL}/insights/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -369,10 +382,57 @@
       }
 
       apiResponse = await response.json();
+
+      // Inicia o polling para a análise de satélite se um task_id for retornado
+      if (apiResponse.satellite_analysis && apiResponse.satellite_analysis.task_id) {
+        satelliteAnalysisTaskId = apiResponse.satellite_analysis.task_id;
+        satelliteAnalysisStatus = 'processing';
+        pollingInterval = setInterval(pollSatelliteAnalysis, 3000); // Polling a cada 3 segundos
+      } else {
+        satelliteAnalysisStatus = 'completed'; // Não há tarefa de satélite, considera como concluído
+        satelliteAnalysisResult = apiResponse.satellite_analysis; // Usa o resultado inicial (simulado)
+      }
+
     } catch (err: any) {
       errorMessage = err.message;
+      satelliteAnalysisStatus = 'failed';
     } finally {
       isLoading = false;
+    }
+  }
+
+  async function pollSatelliteAnalysis() {
+    if (!satelliteAnalysisTaskId) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/satellite/result/${satelliteAnalysisTaskId}`);
+      
+      if (response.status === 202) {
+        // Análise ainda em processamento
+        console.log("Análise de satélite ainda em processamento...");
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Erro ao obter resultado da análise de satélite.');
+      }
+
+      // Análise concluída com sucesso
+      satelliteAnalysisResult = await response.json();
+      satelliteAnalysisStatus = 'completed';
+      clearInterval(pollingInterval);
+      pollingInterval = null;
+
+      // Atualiza o apiResponse principal com o resultado real da análise de satélite
+      apiResponse = { ...apiResponse, satellite_analysis: satelliteAnalysisResult };
+
+    } catch (err: any) {
+      console.error("Erro no polling da análise de satélite:", err);
+      satelliteAnalysisStatus = 'failed';
+      errorMessage = `Erro na análise de satélite: ${err.message}`;
+      clearInterval(pollingInterval);
+      pollingInterval = null;
     }
   }
 </script>
@@ -697,7 +757,11 @@
             <h2>Recomendações para os Próximos 5 Dias</h2>
             <p>Análise detalhada das condições climáticas</p>
           </div>
-          <Results insights={apiResponse} />
+          <Results 
+            insights={apiResponse} 
+            satelliteAnalysisStatus={satelliteAnalysisStatus}
+            satelliteAnalysisResult={satelliteAnalysisResult}
+          />
         </div>
       {/if}
     </div>

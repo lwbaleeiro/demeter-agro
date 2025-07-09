@@ -1,6 +1,11 @@
 version: '3.8'
 
 services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
   backend:
     build:
       context: .
@@ -12,6 +17,10 @@ services:
       - ./requirements.txt:/app/requirements.txt
     env_file:
       - .env
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
@@ -19,9 +28,9 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
-      - "80:80"
+      - "5173:5173"
     depends_on:
       - backend
     volumes:
       - ./frontend:/app/frontend
-    command: npm run dev --prefix frontend
+    command: npm run dev -- --host

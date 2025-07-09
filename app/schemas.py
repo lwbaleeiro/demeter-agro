@@ -120,6 +120,7 @@ class SatelliteAnalysis(BaseModel):
     message: str
     ndvi_value: Optional[float] = None
     image_url: Optional[str] = None
+    task_id: Optional[str] = None
 
 class DemeterInsight(BaseModel):
     spraying_alert: SprayingAlert

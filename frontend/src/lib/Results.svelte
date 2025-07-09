@@ -1,5 +1,7 @@
 <script lang="ts">
     export let insights: any; // The full API response
+    export let satelliteAnalysisStatus: 'idle' | 'processing' | 'completed' | 'failed';
+    export let satelliteAnalysisResult: any; // O resultado final da análise de satélite
 
     function getCardClass(alert: any, type: 'spraying' | 'fungal' | 'frost' | 'heat_stress' | 'planting_window' | 'harvesting_window' | 'irrigation_recommendation' | 'gdd_insight' | 'satellite') {
         if (type === 'spraying') {
@@ -32,7 +34,10 @@
             return 'info'; // GDD is informational
         }
         if (type === 'satellite') {
-            return 'info';
+            if (satelliteAnalysisStatus === 'processing') return 'info';
+            if (satelliteAnalysisStatus === 'completed') return 'positive';
+            if (satelliteAnalysisStatus === 'failed') return 'negative';
+            return '';
         }
         return '';
     }
@@ -60,20 +65,27 @@
 {#if insights}
     <div class="insights-grid">
         <!-- Satellite Analysis Card (Featured) -->
-        {#if insights.satellite_analysis && insights.satellite_analysis.available}
-            <div class="insight-card satellite-card {getCardClass(insights.satellite_analysis, 'satellite')}">
-                <h3>Análise de Satélite (NDVI)</h3>
+        <div class="insight-card satellite-card {getCardClass(insights.satellite_analysis, 'satellite')}">
+            <h3>Análise de Satélite (NDVI)</h3>
+            {#if satelliteAnalysisStatus === 'processing'}
+                <div class="loading-spinner small"></div>
+                <p>Processando imagem de satélite...</p>
+            {:else if satelliteAnalysisStatus === 'completed' && satelliteAnalysisResult && satelliteAnalysisResult.available}
                 <div class="satellite-content">
                     <div class="satellite-image-container">
-                        <img src={insights.satellite_analysis.image_url} alt="Imagem de Satélite da Área" class="satellite-image"/>
+                        <img src={satelliteAnalysisResult.image_url} alt="Imagem de Satélite da Área" class="satellite-image"/>
                     </div>
                     <div class="satellite-details">
-                        <p class="ndvi-value">NDVI: {insights.satellite_analysis.ndvi_value}</p>
-                        <p>{insights.satellite_analysis.message}</p>
+                        <p class="ndvi-value">NDVI: {satelliteAnalysisResult.ndvi_value}</p>
+                        <p>{satelliteAnalysisResult.message}</p>
                     </div>
                 </div>
-            </div>
-        {/if}
+            {:else if satelliteAnalysisStatus === 'failed'}
+                <p class="error-message">Erro ao carregar análise de satélite. Tente novamente.</p>
+            {:else}
+                <p>Análise de satélite não disponível ou não iniciada.</p>
+            {/if}
+        </div>
 
         <!-- GDD Insight Card (Featured) -->
         {#if insights.gdd_insight && insights.gdd_insight.gdd_calculated}
