@@ -419,13 +419,24 @@
       }
 
       // Análise concluída com sucesso
-      satelliteAnalysisResult = await response.json();
+      const fetchedSatelliteResult = await response.json();
+      satelliteAnalysisResult = fetchedSatelliteResult; // Ensure satelliteAnalysisResult is updated
       satelliteAnalysisStatus = 'completed';
       clearInterval(pollingInterval);
       pollingInterval = null;
 
       // Atualiza o apiResponse principal com o resultado real da análise de satélite
-      apiResponse = { ...apiResponse, satellite_analysis: satelliteAnalysisResult };
+      // Preserva o ndvi_insight que já veio na resposta inicial do /insights/
+      apiResponse = {
+        ...apiResponse,
+        satellite_analysis: {
+          ...apiResponse.satellite_analysis,
+          available: fetchedSatelliteResult.available,
+          message: fetchedSatelliteResult.message,
+          ndvi_value: fetchedSatelliteResult.ndvi_value,
+          image_url: fetchedSatelliteResult.image_url,
+        },
+      };
 
     } catch (err: any) {
       console.error("Erro no polling da análise de satélite:", err);

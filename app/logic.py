@@ -124,7 +124,7 @@ def mps_to_kmh(mps: float) -> float:
     """Converte metros por segundo para quilômetros por hora."""
     return mps * 3.6
 
-def analyze_forecast(forecast_data: Dict[str, Any], historical_data: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
+def analyze_forecast(forecast_data: Dict[str, Any], historical_data: Dict[str, Any], config: Dict[str, Any], satellite_analysis_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Analisa os dados de previsão do tempo para gerar insights, usando configurações dinâmicas.
     """
@@ -170,6 +170,8 @@ def analyze_forecast(forecast_data: Dict[str, Any], historical_data: Dict[str, A
     harvesting_window_alert = find_harvesting_window(forecast_list, harvest_rain_prob_threshold, harvest_humidity_threshold, min_window_hours)
     irrigation_recommendation = find_irrigation_recommendation(forecast_list, irrigation_no_rain_threshold, irrigation_temp_threshold, irrigation_min_hours)
     gdd_insight = calculate_gdd(historical_data, gdd_base_temp)
+    ndvi_insight = analyze_ndvi_insight(satellite_analysis_data)
+
     return {
         "spraying_alert": spraying_window,
         "fungal_risk_alert": fungal_risk,
@@ -178,8 +180,43 @@ def analyze_forecast(forecast_data: Dict[str, Any], historical_data: Dict[str, A
         "planting_window_alert": planting_window_alert,
         "harvesting_window_alert": harvesting_window_alert,
         "irrigation_recommendation": irrigation_recommendation,
-        "gdd_insight": gdd_insight
+        "gdd_insight": gdd_insight,
+        "satellite_analysis": satellite_analysis_data, # Inclui os dados brutos da análise de satélite
+        "ndvi_insight": ndvi_insight # Inclui o insight textual do NDVI
     }
+
+def analyze_ndvi_insight(satellite_analysis_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Analisa o valor do NDVI e retorna um insight textual.
+    """
+    if not satellite_analysis_data or not satellite_analysis_data.get("available"):
+        return {"message": "Análise de satélite não disponível ou em processamento.", "level": "info"}
+
+    ndvi_value = satellite_analysis_data.get("ndvi_value")
+
+    if ndvi_value is None:
+        return {"message": "Valor de NDVI não disponível.", "level": "info"}
+
+    message = ""
+    level = "info"
+
+    if ndvi_value >= 0.7:
+        message = "NDVI muito alto. Indica vegetação extremamente vigorosa e saudável. Excelente!"
+        level = "success"
+    elif ndvi_value >= 0.5:
+        message = "NDVI alto. Indica vegetação saudável e bom desenvolvimento da cultura."
+        level = "success"
+    elif ndvi_value >= 0.3:
+        message = "NDVI moderado. A vegetação está presente, mas pode indicar estresse leve ou fase inicial de desenvolvimento."
+        level = "warning"
+    elif ndvi_value >= 0.1:
+        message = "NDVI baixo. Sugere vegetação esparsa, estresse significativo ou solo exposto. Requer investigação."
+        level = "danger"
+    else:
+        message = "NDVI muito baixo ou negativo. Indica ausência de vegetação ou áreas com problemas graves. Urge investigação."
+        level = "danger"
+
+    return {"message": message, "level": level, "ndvi_value": ndvi_value, "explanation_text": "O Índice de Vegetação por Diferença Normalizada (NDVI) é um indicador gráfico que pode ser usado para analisar imagens de satélite e avaliar se a área contém vegetação verde e em que estágio de saúde ela se encontra. Valores de NDVI variam de -1 a +1. Valores mais altos (próximos de +1) indicam vegetação densa e saudável, enquanto valores mais baixos (próximos de -1 ou 0) podem indicar solo exposto, água ou vegetação estressada/morta."}
 
 def find_spraying_window(forecast_list: List[Dict[str, Any]], wind_speed_threshold_ms: float, precipitation_prob_threshold: float, min_window_hours: float) -> Dict[str, Any]:
     """Encontra a melhor janela contínua para pulverização."""

@@ -101,13 +101,12 @@ async def get_demeter_insights(location: FarmLocation, config: AnalysisConfig = 
         )
 
     # A função de análise agora recebe ambos os conjuntos de dados
-    insights = logic.analyze_forecast(forecast_data, historical_data, config.model_dump() | {"lat": location.lat, "lon": location.lon})
+    insights = logic.analyze_forecast(forecast_data, historical_data, config.model_dump() | {"lat": location.lat, "lon": location.lon}, satellite_analysis_initial.model_dump())
     
     if insights.get("error"):
         raise HTTPException(status_code=500, detail=insights.get("error"))
 
-    # Sobrescreve a análise de satélite simulada com o status da tarefa real
-    insights["satellite_analysis"] = satellite_analysis_initial.model_dump()
+    # A análise de satélite já está incluída nos insights retornados por logic.analyze_forecast
 
     return insights
 
@@ -120,7 +119,9 @@ async def get_satellite_analysis_result(task_id: str):
     if not redis_pool:
         raise HTTPException(status_code=500, detail="Redis pool not initialized.")
 
+    print(f"Received task_id: {task_id}")
     result_json = await redis_pool.get(task_id)
+    print(f"Result from Redis for {task_id}: {result_json}")
 
     if not result_json:
         # If the job is not yet finished, or if it failed and the result was not stored

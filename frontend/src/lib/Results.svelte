@@ -35,7 +35,15 @@
         }
         if (type === 'satellite') {
             if (satelliteAnalysisStatus === 'processing') return 'info';
-            if (satelliteAnalysisStatus === 'completed') return 'positive';
+            if (satelliteAnalysisStatus === 'completed') {
+                if (insights.ndvi_insight) {
+                    const level = insights.ndvi_insight.level;
+                    if (level === 'success') return 'positive';
+                    if (level === 'warning') return 'warning';
+                    if (level === 'danger') return 'negative';
+                }
+                return 'info'; // Default if ndvi_insight is not yet available
+            }
             if (satelliteAnalysisStatus === 'failed') return 'negative';
             return '';
         }
@@ -76,8 +84,12 @@
                         <img src={satelliteAnalysisResult.image_url} alt="Imagem de Satélite da Área" class="satellite-image"/>
                     </div>
                     <div class="satellite-details">
-                        <p class="ndvi-value">NDVI: {satelliteAnalysisResult.ndvi_value}</p>
-                        <p>{satelliteAnalysisResult.message}</p>
+                        <p class="ndvi-value">NDVI: {satelliteAnalysisResult.ndvi_value?.toFixed(4)}</p>
+                        <p>{insights.ndvi_insight?.message}
+                            {#if insights.ndvi_insight?.explanation_text}
+                                <span class="info-icon" title={insights.ndvi_insight.explanation_text}>&#9432;</span>
+                            {/if}
+                        </p>
                     </div>
                 </div>
             {:else if satelliteAnalysisStatus === 'failed'}
@@ -294,6 +306,13 @@
     .details {
         font-size: 0.9rem;
         opacity: 0.8;
+    }
+
+    .info-icon {
+        cursor: help;
+        margin-left: 5px;
+        color: #2196F3; /* Material Blue */
+        font-weight: bold;
     }
 
     ul {

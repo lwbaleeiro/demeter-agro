@@ -20,11 +20,12 @@ async def analyze_satellite_image(ctx, lat: float, lon: float):
     await initialize_google_earth_engine(ctx)
 
     point = ee.Geometry.Point(lon, lat)
-    print("ee point>>" + str(point))
     
     # Definir o período de busca (últimos 30 dias)
     end_date = datetime.now()
     start_date = end_date - timedelta(days=30)
+
+    print(f"Searching for images from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
 
     # Usar a coleção de imagens do Sentinel-2
     collection = (
@@ -35,7 +36,19 @@ async def analyze_satellite_image(ctx, lat: float, lon: float):
         .limit(1)
     )
     
-    image = ee.Image(collection.first())
+    image = collection.first()
+
+    if not image:
+        print("No image found for the given criteria.")
+        result = {
+            "ndvi_value": None,
+            "image_url": None,
+            "message": "Nenhuma imagem de satélite encontrada para a área e período especificados."
+        }
+        await ctx['redis'].set(ctx['job_id'], json.dumps(result), ex=3600)
+        return result
+
+    print("Image found. Calculating NDVI...")
     
     # Calcular NDVI
     ndvi = image.normalizedDifference(['B8', 'B4']).rename('NDVI')
@@ -47,6 +60,8 @@ async def analyze_satellite_image(ctx, lat: float, lon: float):
         scale=10
     ).get('NDVI').getInfo()
 
+    print(f"NDVI calculated: {ndvi_value}")
+
     # Gerar URL da imagem de thumbnail
     image_url = image.getThumbUrl({
         'bands': ['B4', 'B3', 'B2'], # RGB
@@ -55,6 +70,8 @@ async def analyze_satellite_image(ctx, lat: float, lon: float):
         'region': point.buffer(500).bounds().getInfo()
     })
 
+    print(f"Image URL generated: {image_url}")
+
     result = {
         "ndvi_value": round(ndvi_value, 4) if ndvi_value else None,
         "image_url": image_url
@@ -62,6 +79,7 @@ async def analyze_satellite_image(ctx, lat: float, lon: float):
 
     # Armazenar o resultado no Redis usando o job_id como chave, como JSON
     await ctx['redis'].set(ctx['job_id'], json.dumps(result), ex=3600) # Expira em 1 hora
+    print("Result stored in Redis.")
     return result
 
 

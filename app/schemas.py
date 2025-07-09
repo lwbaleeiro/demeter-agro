@@ -122,6 +122,12 @@ class SatelliteAnalysis(BaseModel):
     image_url: Optional[str] = None
     task_id: Optional[str] = None
 
+class NDVIInsight(BaseModel):
+    message: str
+    level: str
+    ndvi_value: Optional[float] = None
+    explanation_text: Optional[str] = None
+
 class DemeterInsight(BaseModel):
     spraying_alert: SprayingAlert
     fungal_risk_alert: FungalRiskAlert
@@ -132,3 +138,4 @@ class DemeterInsight(BaseModel):
     irrigation_recommendation: IrrigationRecommendation
     gdd_insight: GDDInsight
     satellite_analysis: SatelliteAnalysis
+    ndvi_insight: NDVIInsight
