@@ -1,3 +1,4 @@
 app/__pycache__/
 gee-demeter-app.json
 .env
+email-send.txt
