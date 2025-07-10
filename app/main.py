@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from .schemas import FarmLocation, DemeterInsight, AnalysisConfig, SatelliteAnalysis
+from .schemas import FarmLocation, DemeterInsight, AnalysisConfig, SatelliteAnalysis, Feedback
 from . import services
 from . import logic
 from .config import settings
@@ -8,6 +8,13 @@ import asyncio
 import json
 from arq import create_pool
 from arq.connections import RedisSettings
+import os
+from dotenv import load_dotenv
+
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+
+load_dotenv()
 
 app = FastAPI(
     title="Demeter - Inteligência Climática para o Agro",
@@ -151,3 +158,39 @@ async def get_raw_weather_data(location: FarmLocation):
     if weather_data.get("error"):
         raise HTTPException(status_code=500, detail=weather_data.get("error"))
     return weather_data
+
+@app.post("/api/feedback")
+async def send_feedback(feedback: Feedback):
+    """
+    Recebe uma mensagem de feedback e a envia por e-mail usando SendGrid.
+    """
+    SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+    FROM_EMAIL = os.getenv("FROM_EMAIL")
+    TO_EMAIL = os.getenv("TO_EMAIL")
+
+    if not all([SENDGRID_API_KEY, FROM_EMAIL, TO_EMAIL]):
+        raise HTTPException(status_code=500, detail="Configuração de e-mail SendGrid incompleta no servidor.")
+
+    subject = f"Novo Feedback do App Demeter: {feedback.name or 'Anônimo'}"
+    content = f"De: {feedback.name or 'Anônimo'} ({feedback.email or 'Não fornecido'})\n\n{feedback.message}"
+
+    message = Mail(
+        from_email=FROM_EMAIL,
+        to_emails=TO_EMAIL,
+        subject=subject,
+        plain_text_content=content
+    )
+
+    try:
+        sendgrid_client = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sendgrid_client.send(message)
+        print(f"SendGrid Status Code: {response.status_code}")
+        print(f"SendGrid Body: {response.body}")
+        print(f"SendGrid Headers: {response.headers}")
+        if response.status_code >= 200 and response.status_code < 300:
+            return {"status": "Feedback enviado com sucesso!"}
+        else:
+            raise HTTPException(status_code=500, detail=f"Erro ao enviar feedback via SendGrid: {response.status_code} - {response.body}")
+    except Exception as e:
+        print(f"Erro ao enviar e-mail via SendGrid: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao enviar o feedback.")

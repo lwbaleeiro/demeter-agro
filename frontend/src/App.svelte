@@ -59,7 +59,7 @@
         plantingTempMin: 18,
         plantingTempMax: 30,
         plantingRainProbThreshold: 0.3,
-        harvestRainProbThreshold: 0.1,
+        harvestRainProbThreshold: 0.05,
         harvestHumidityThreshold: 70,
         irrigationNoRainThreshold: 0.05,
         irrigationTempThreshold: 25,
@@ -562,6 +562,46 @@
       pollingInterval = null;
     }
   }
+
+  // --- Variáveis e Funções para o Feedback ---
+  let showFeedbackModal = false;
+  let feedbackName = '';
+  let feedbackEmail = '';
+  let feedbackMessage = '';
+  let statusMessage = '';
+
+  async function handleFeedbackSubmit() {
+    statusMessage = 'Enviando...';
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          name: feedbackName,
+          email: feedbackEmail,
+          message: feedbackMessage 
+        }),
+      });
+
+      if (response.ok) {
+        statusMessage = 'Obrigado pelo seu feedback!';
+        setTimeout(() => {
+          showFeedbackModal = false;
+          feedbackName = '';
+          feedbackEmail = '';
+          feedbackMessage = '';
+          statusMessage = '';
+        }, 2000);
+      } else {
+        const error = await response.json();
+        statusMessage = `Erro: ${error.detail || 'Não foi possível enviar.'}`;
+      }
+    } catch (error) {
+      statusMessage = 'Erro de conexão. Tente novamente.';
+    }
+  }
 </script>
 
 <div class="app-container">
@@ -905,4 +945,345 @@
       <p>Demeter - Inteligência Climática para o Agro</p>
     </div>
   </footer>
+
+  <!-- Botão de Feedback Flutuante -->
+  <button class="feedback-button" on:click={() => showFeedbackModal = true}>
+    Feedback
+  </button>
+
+  {#if showFeedbackModal}
+    <div
+      class="modal-backdrop"
+      on:click={() => showFeedbackModal = false}
+      on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') showFeedbackModal = false; }}
+      role="button"
+      tabindex="0"
+    >
+      <div class="modal-content" on:click|stopPropagation role="dialog" aria-modal="true">
+        <h2>Deixe seu Feedback</h2>
+        <p>Encontrou um problema ou tem uma sugestão? Nos avise!</p>
+        <form on:submit|preventDefault={handleFeedbackSubmit}>
+          <input
+            type="text"
+            bind:value={feedbackName}
+            placeholder="Seu nome (opcional)"
+            class="feedback-input"
+          />
+          <input
+            type="email"
+            bind:value={feedbackEmail}
+            placeholder="Seu e-mail (opcional)"
+            class="feedback-input"
+          />
+          <textarea
+            bind:value={feedbackMessage}
+            rows="5"
+            placeholder="Sua mensagem aqui..."
+            required
+          ></textarea>
+          <div class="modal-actions">
+            <button type="button" on:click={() => showFeedbackModal = false}>Cancelar</button>
+            <button type="submit">Enviar</button>
+          </div>
+        </form>
+        {#if statusMessage}
+          <p class="status-message">{statusMessage}</p>
+        {/if}
+      </div>
+    </div>
+  {/if}
 </div>
+
+<style>
+  /* Estilos gerais e do container */
+  .app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f2f5;
+  }
+
+  .hero-section {
+    background: linear-gradient(to right, #4CAF50, #8BC34A);
+    color: white;
+    padding: 40px 20px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .hero-title {
+    font-size: 3em;
+    margin-bottom: 10px;
+  }
+
+  .hero-subtitle {
+    font-size: 1.2em;
+    opacity: 0.9;
+  }
+
+  .main-content {
+    flex-grow: 1;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .content-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    max-width: 1200px;
+  }
+
+  .section-card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+  }
+
+  .section-header {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+  }
+
+  .section-header h2 {
+    font-size: 1.8em;
+    color: #333;
+    margin-bottom: 5px;
+  }
+
+  .section-header p {
+    color: #666;
+    font-size: 0.9em;
+  }
+
+  .location-inputs {
+    margin-bottom: 20px;
+  }
+
+  .input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+
+  .location-input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1em;
+  }
+
+  .map-container {
+    height: 400px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #ddd;
+  }
+
+  .config-content {
+    margin-top: 10px;
+  }
+
+  .crop-profile-section {
+    margin-bottom: 20px;
+  }
+
+  .profile-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #555;
+  }
+
+  .profile-select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+    font-size: 1em;
+  }
+
+  .config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+  }
+
+  .config-item label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    color: #666;
+  }
+
+  .config-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+
+  .action-section {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+
+  .analyze-button, .print-button {
+    background-color: #28a745;
+    color: white;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .analyze-button:hover:not(:disabled), .print-button:hover:not(:disabled) {
+    background-color: #218838;
+  }
+
+  .analyze-button:disabled, .print-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+
+  .loading-spinner {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid #fff;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+  }
+
+  .loading-spinner.large {
+    width: 40px;
+    height: 40px;
+    border-width: 6px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .loading-section, .error-section {
+    text-align: center;
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+  }
+
+  .error-section {
+    color: #dc3545;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+  }
+
+  .error-icon {
+    font-size: 2em;
+    margin-bottom: 10px;
+  }
+
+  .results-section {
+    margin-top: 20px;
+  }
+
+  .app-footer {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 20px;
+    margin-top: 20px;
+  }
+
+  .footer-content p {
+    margin: 5px 0;
+    font-size: 0.9em;
+    opacity: 0.8;
+  }
+
+  /* Botão de Feedback Flutuante */
+  .feedback-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 1000;
+  }
+
+  /* Estilos do Modal */
+  .modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1001;
+  }
+
+  .modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  }
+
+  .feedback-input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px; /* Adicionado para espaçamento entre os inputs */
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
+
+  textarea {
+    width: 100%;
+    padding: 10px;
+    margin-top: 0px; /* Ajustado para não ter margem superior extra */
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  
+  .status-message {
+    margin-top: 15px;
+    color: #333;
+  }
+</style>

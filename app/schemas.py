@@ -139,3 +139,8 @@ class DemeterInsight(BaseModel):
     gdd_insight: GDDInsight
     satellite_analysis: SatelliteAnalysis
     ndvi_insight: NDVIInsight
+
+class Feedback(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    message: str

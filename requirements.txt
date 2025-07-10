@@ -6,3 +6,5 @@ arq
 redis
 google-api-python-client
 earthengine-api
+python-dotenv
+sendgrid
