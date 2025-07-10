@@ -9,6 +9,8 @@
   let isLoading = false;
   let apiResponse: any = null;
   let errorMessage: string | null = null;
+  let lastAnalysisParams: { lat: string; lon: string; profile: string } | null = null;
+  let isSameAsLastAnalysis = false;
 
   // Variáveis para o polling da análise de satélite
   let satelliteAnalysisTaskId: string | null = null;
@@ -35,6 +37,14 @@
   let minWindowHours: number = 12; // Geral
 
   let selectedCropProfile: string = 'livre';
+
+  function handleCoordinateInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    // Permite apenas números, um ponto decimal e um sinal de negativo no início.
+    input.value = input.value.replace(/[^-0-9.]/g, '')
+                               .replace(/(\..*)\./g, '$1')
+                               .replace(/(?!^)-/g, '');
+  }
 
   // Novo: Mapeamento de perfis de cultura (deve ser sincronizado com o backend)
   const CROP_PROFILES: { [key: string]: any } = {
@@ -173,6 +183,16 @@
       selectedCoords = { lat, lon };
     } else {
       selectedCoords = null; // Invalida as coordenadas se os inputs não forem números válidos
+    }
+
+    // Verifica se os parâmetros atuais são os mesmos da última análise
+    if (lastAnalysisParams) {
+      isSameAsLastAnalysis = 
+        latitudeInput === lastAnalysisParams.lat &&
+        longitudeInput === lastAnalysisParams.lon &&
+        selectedCropProfile === lastAnalysisParams.profile;
+    } else {
+      isSameAsLastAnalysis = false;
     }
   }
 
@@ -440,6 +460,13 @@
 
       apiResponse = await response.json();
 
+      // Armazena os parâmetros da última análise bem-sucedida para evitar repetições
+      lastAnalysisParams = {
+        lat: latitudeInput,
+        lon: longitudeInput,
+        profile: selectedCropProfile,
+      };
+
       // Inicia o polling para a análise de satélite se um task_id for retornado
       if (apiResponse.satellite_analysis && apiResponse.satellite_analysis.task_id) {
         satelliteAnalysisTaskId = apiResponse.satellite_analysis.task_id;
@@ -560,12 +587,14 @@
               type="text" 
               placeholder="Latitude" 
               bind:value={latitudeInput}
+              on:input={handleCoordinateInput}
               class="location-input"
             />
             <input 
               type="text" 
               placeholder="Longitude" 
               bind:value={longitudeInput}
+              on:input={handleCoordinateInput}
               class="location-input"
             />
           </div>
@@ -815,8 +844,9 @@
       <div class="action-section">
         <button 
           on:click={handleAnalyzeClick} 
-          disabled={!selectedCoords || isLoading}
+          disabled={!selectedCoords || isLoading || isSameAsLastAnalysis}
           class="analyze-button"
+          title={isSameAsLastAnalysis ? 'Altere os parâmetros para uma nova análise' : 'Analisar Clima'}
         >
           {#if isLoading}
             <span class="loading-spinner"></span>
