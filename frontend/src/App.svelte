@@ -318,11 +318,11 @@
     }
     y += 10;
 
-    // Adicionar nova página se necessário
-    if (y > pageHeight - bottomMargin) {
-      doc.addPage();
-      y = 20;
-    }
+    // // Adicionar nova página se necessário
+    // if (y > pageHeight - bottomMargin) {
+    //   doc.addPage();
+    //   y = 20;
+    // }
 
     // 7. Janela de Plantio/Semeadura
     doc.setFontSize(14);
