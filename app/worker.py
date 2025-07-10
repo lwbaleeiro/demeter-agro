@@ -1,23 +1,32 @@
 import ee
+import os
 import json
 from datetime import datetime, timedelta
 from arq.connections import RedisSettings
+from ee import ServiceAccountCredentials
 from .config import settings
-
-async def initialize_google_earth_engine(ctx):
-    """Autentica e inicializa a sessão com o Google Earth Engine."""
-    try:
-        ee.Initialize(project=settings.GOOGLE_PROJECT_ID)
-        print("Google Earth Engine inicializado com sucesso.")
-    except Exception as e:
-        print(f"Falha ao inicializar o Google Earth Engine: {e}")
-        print("Certifique-se de que suas credenciais (GOOGLE_APPLICATION_CREDENTIALS) e o ID do projeto (GOOGLE_PROJECT_ID) estão configurados corretamente.")
 
 async def analyze_satellite_image(ctx, lat: float, lon: float):
     """
     Tarefa de fundo (ARQ) para analisar a imagem de satélite.
     """
-    await initialize_google_earth_engine(ctx)
+    try:
+        print("Attempting to initialize Earth Engine...")
+        credentials = ServiceAccountCredentials(
+            email=os.environ["GOOGLE_SERVICE_ACCOUNT_EMAIL"],
+            key_file=os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+        )
+        ee.Initialize(credentials, project=os.environ["GOOGLE_PROJECT_ID"])
+        print("Earth Engine initialized successfully.")
+    except Exception as e:
+        print(f"Error initializing Earth Engine: {e}")
+        # Se a inicialização falhar, retorne um erro para o cliente.
+        result = {
+            "error": "Falha ao inicializar o Google Earth Engine.",
+            "details": str(e)
+        }
+        await ctx['redis'].set(ctx['job_id'], json.dumps(result), ex=3600)
+        return result
 
     point = ee.Geometry.Point(lon, lat)
     
@@ -85,5 +94,4 @@ async def analyze_satellite_image(ctx, lat: float, lon: float):
 
 class WorkerSettings:
     functions = [analyze_satellite_image]
-    on_startup = initialize_google_earth_engine
     redis_settings = RedisSettings.from_dsn(settings.REDIS_DSN)
