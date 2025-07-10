@@ -1,5 +1,6 @@
 <script lang="ts">
     import "./Results.css";
+
     export let insights: any; // The full API response
     export let satelliteAnalysisStatus: 'idle' | 'processing' | 'completed' | 'failed';
     export let satelliteAnalysisResult: any; // O resultado final da análise de satélite

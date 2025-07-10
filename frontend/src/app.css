@@ -209,6 +209,15 @@ label, .profile-label {
   transform: translateY(-2px);
 }
 
+.print-button:disabled {
+  background-color: var(--neutral-medium);
+  color: var(--neutral-dark);
+  border-color: var(--neutral-medium);
+  cursor: not-allowed;
+  opacity: 0.6;
+  pointer-events: none; /* Remove todos os eventos do mouse, incluindo hover */
+}
+
 /* Estados de Loading e Erro */
 .loading-section, .error-section {
   text-align: center;

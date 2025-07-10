@@ -830,6 +830,8 @@
           <button 
             on:click={handlePrintReport} 
             class="print-button"
+            disabled={satelliteAnalysisStatus !== 'completed' && satelliteAnalysisStatus !== 'failed'}
+            title={satelliteAnalysisStatus === 'processing' ? 'Aguarde a conclusão da análise de satélite' : 'Gerar Relatório em PDF'}
           >
             Gerar Relatório PDF
           </button>
