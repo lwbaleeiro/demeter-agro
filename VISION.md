@@ -1,6 +1,6 @@
-# Agrometria - Technical Vision and Future Roadmap
+# SmartAgroClima - Technical Vision and Future Roadmap
 
-This document outlines the current technical state of the Agrometria project and a strategic vision for its future development.
+This document outlines the current technical state of the SmartAgroClima project and a strategic vision for its future development.
 
 ## Current Architecture (MVP v2)
 
@@ -28,7 +28,7 @@ The application is architected as a decoupled system, consisting of a backend AP
 
 ## Future Roadmap & Technical Vision
 
-The current MVP is a solid foundation. The following steps outline a vision for evolving Agrometria into a more powerful and robust platform.
+The current MVP is a solid foundation. The following steps outline a vision for evolving SmartAgroClima into a more powerful and robust platform.
 
 ### Phase 1: Refinement and Production Readiness
 

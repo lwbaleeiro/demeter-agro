@@ -399,14 +399,14 @@
       doc.setFontSize(8);
       doc.setTextColor(150);
       doc.text(
-        'Agrometria - Inteligência Climática para o Agro',
+        'Smart Agro Clima - Inteligência Climática para o Agro',
         doc.internal.pageSize.getWidth() / 2,
         doc.internal.pageSize.getHeight() - 12,
         { align: 'center' }
       );
     }
 
-    doc.save('relatorio_agrometria.pdf');
+    doc.save('relatorio_smart_agro_clima.pdf');
   }
 
   async function handleAnalyzeClick() {
@@ -607,7 +607,7 @@
 <div class="app-container">
   <div class="hero-section">
     <div class="hero-content">
-      <h1 class="hero-title">Agrometria</h1>
+      <h1 class="hero-title">SmartAgroClima</h1>
       <p class="hero-subtitle">Inteligência Climática para Decisões Agrícolas</p>
     </div>
   </div>
@@ -941,8 +941,7 @@
 
   <footer class="app-footer">
     <div class="footer-content">
-      <p>MVP v2 com Svelte e Leaflet.js</p>
-      <p>Agrometria - Inteligência Climática para o Agro</p>
+      <p>Smart Agro Clima - Inteligência Climática para o Agro</p>
     </div>
   </footer>
 
