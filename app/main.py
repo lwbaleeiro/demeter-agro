@@ -17,7 +17,7 @@ from sendgrid.helpers.mail import Mail
 load_dotenv()
 
 app = FastAPI(
-    title="Demeter - Inteligência Climática para o Agro",
+    title="Agrometria - Inteligência Climática para o Agro",
     description="API para traduzir dados climáticos em insights acionáveis para agricultores.",
     version="0.3.0" # Versão atualizada para refletir a integração com GEE e ARQ
 )
@@ -53,7 +53,7 @@ async def shutdown_event():
 
 @app.get("/")
 def read_root():
-    return {"message": "Bem-vindo à API Demeter"}
+    return {"message": "Bem-vindo à API Agrometria"}
 
 
 @app.post("/insights/", response_model=DemeterInsight)
@@ -171,7 +171,7 @@ async def send_feedback(feedback: Feedback):
     if not all([SENDGRID_API_KEY, FROM_EMAIL, TO_EMAIL]):
         raise HTTPException(status_code=500, detail="Configuração de e-mail SendGrid incompleta no servidor.")
 
-    subject = f"Novo Feedback do App Demeter: {feedback.name or 'Anônimo'}"
+    subject = f"Novo Feedback do App Agrometria: {feedback.name or 'Anônimo'}"
     content = f"De: {feedback.name or 'Anônimo'} ({feedback.email or 'Não fornecido'})\n\n{feedback.message}"
 
     message = Mail(
