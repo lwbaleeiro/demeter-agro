@@ -189,13 +189,11 @@ def analyze_ndvi_insight(satellite_analysis_data: Dict[str, Any]) -> Dict[str, A
     """
     Analisa o valor do NDVI e retorna um insight textual.
     """
-    if not satellite_analysis_data or not satellite_analysis_data.get("available"):
-        return {"message": "Análise de satélite não disponível ou em processamento.", "level": "info"}
-
     ndvi_value = satellite_analysis_data.get("ndvi_value")
 
     if ndvi_value is None:
-        return {"message": "Valor de NDVI não disponível.", "level": "info"}
+        # Se não há valor de NDVI, não há insight para gerar ainda.
+        return {"message": "Análise de satélite em processamento...", "level": "info"}
 
     message = ""
     level = "info"

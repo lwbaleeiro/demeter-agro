@@ -78,7 +78,7 @@
             {#if satelliteAnalysisStatus === 'processing'}
                 <div class="loading-spinner small"></div>
                 <p>Processando imagem de satélite...</p>
-            {:else if satelliteAnalysisStatus === 'completed' && satelliteAnalysisResult && satelliteAnalysisResult.available}
+            {:else if satelliteAnalysisStatus === 'completed' && satelliteAnalysisResult && satelliteAnalysisResult.image_url && satelliteAnalysisResult.ndvi_value}
                 <div class="satellite-content">
                     <div class="satellite-image-container">
                         <img src={satelliteAnalysisResult.image_url} alt="Imagem de Satélite da Área" class="satellite-image"/>
@@ -95,7 +95,7 @@
             {:else if satelliteAnalysisStatus === 'failed'}
                 <p class="error-message">Erro ao carregar análise de satélite. Tente novamente.</p>
             {:else}
-                <p>Análise de satélite não disponível ou não iniciada.</p>
+                <p>pamonha.</p>
             {/if}
         </div>
 

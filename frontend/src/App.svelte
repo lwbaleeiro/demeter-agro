@@ -176,13 +176,33 @@
     }
   }
 
-  function handlePrintReport() {
+  async function handlePrintReport() {
     if (!apiResponse) {
       alert('Nenhum dado de análise para imprimir.');
       return;
     }
 
     const doc = new jsPDF();
+    const bottomMargin = 20;
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Função para carregar imagem e converter para Base64
+    const loadImageAsBase64 = (url: string) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx!.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/jpeg'));
+            };
+            img.onerror = (err) => reject(err);
+            img.src = url;
+        });
+    };
 
     doc.setFontSize(18);
     doc.text('Relatório de Análise Climática', 14, 22);
@@ -193,16 +213,52 @@
 
     let y = 50;
 
-    // Função auxiliar para adicionar texto com quebra de linha
     const addText = (text: string, x: number, y: number, maxWidth: number) => {
       const splitText = doc.splitTextToSize(text, maxWidth);
       doc.text(splitText, x, y);
       return y + (splitText.length * doc.getLineHeight() / doc.internal.scaleFactor);
     };
 
-    // Insights de Pulverização
+    // 1. Análise de Satélite (NDVI)
+    if (apiResponse.satellite_analysis && apiResponse.satellite_analysis.image_url) {
+        doc.setFontSize(14);
+        doc.text('1. Análise de Satélite (NDVI)', 14, y);
+        y += 7;
+
+        try {
+            const imageDataUrl = await loadImageAsBase64(apiResponse.satellite_analysis.image_url);
+            doc.addImage(imageDataUrl, 'JPEG', 14, y, 80, 80); // Adiciona a imagem
+            y += 85; // Espaço para a imagem
+        } catch (e) {
+            console.error("Erro ao carregar imagem para o PDF:", e);
+            doc.setFontSize(10);
+            y = addText('Não foi possível carregar a imagem de satélite.', 14, y, 180);
+        }
+
+        doc.setFontSize(10);
+        if (apiResponse.ndvi_insight && apiResponse.ndvi_insight.ndvi_value) {
+            y = addText(`NDVI: ${apiResponse.ndvi_insight.ndvi_value.toFixed(4)}`, 14, y, 180);
+        }
+        y = addText(apiResponse.ndvi_insight.message, 14, y, 180);
+        y += 10;
+    }
+
+    // 2. Graus-Dia (GDD)
+    if (apiResponse.gdd_insight) {
+        doc.setFontSize(14);
+        doc.text('2. Graus-Dia Acumulados (GDD)', 14, y);
+        y += 7;
+        doc.setFontSize(10);
+        y = addText(apiResponse.gdd_insight.message, 14, y, 180);
+        if (apiResponse.gdd_insight.gdd_calculated) {
+            y = addText(`GDD Acumulado (5 dias): ${apiResponse.gdd_insight.total_gdd?.toFixed(2)}`, 18, y, 180);
+        }
+        y += 10;
+    }
+
+    // 3. Alerta de Pulverização
     doc.setFontSize(14);
-    doc.text('1. Alerta de Pulverização', 14, y);
+    doc.text('3. Alerta de Pulverização', 14, y);
     y += 7;
     doc.setFontSize(10);
     y = addText(apiResponse.spraying_alert.message, 14, y, 180);
@@ -213,9 +269,9 @@
     }
     y += 10;
 
-    // Risco Fúngico
+    // 4. Risco Fúngico
     doc.setFontSize(14);
-    doc.text('2. Risco Fúngico', 14, y);
+    doc.text('4. Risco Fúngico', 14, y);
     y += 7;
     doc.setFontSize(10);
     y = addText(apiResponse.fungal_risk_alert.message, 14, y, 180);
@@ -224,9 +280,15 @@
     }
     y += 10;
 
-    // Alerta de Geada
+    // Adicionar nova página se necessário
+    if (y > pageHeight - bottomMargin) {
+      doc.addPage();
+      y = 20;
+    }
+
+    // 5. Alerta de Geada
     doc.setFontSize(14);
-    doc.text('3. Alerta de Geada', 14, y);
+    doc.text('5. Alerta de Geada', 14, y);
     y += 7;
     doc.setFontSize(10);
     y = addText(apiResponse.frost_alert.message, 14, y, 180);
@@ -238,9 +300,13 @@
     }
     y += 10;
 
-    // Estresse por Calor
+    // Necessário adicionar nova página
+    doc.addPage();
+    y = 20;
+
+    // 6. Estresse por Calor
     doc.setFontSize(14);
-    doc.text('4. Estresse por Calor', 14, y);
+    doc.text('6. Estresse por Calor', 14, y);
     y += 7;
     doc.setFontSize(10);
     y = addText(apiResponse.heat_stress_alert.message, 14, y, 180);
@@ -252,9 +318,15 @@
     }
     y += 10;
 
-    // Janela de Plantio/Semeadura
+    // Adicionar nova página se necessário
+    if (y > pageHeight - bottomMargin) {
+      doc.addPage();
+      y = 20;
+    }
+
+    // 7. Janela de Plantio/Semeadura
     doc.setFontSize(14);
-    doc.text('5. Janela de Plantio/Semeadura', 14, y);
+    doc.text('7. Janela de Plantio/Semeadura', 14, y);
     y += 7;
     doc.setFontSize(10);
     y = addText(apiResponse.planting_window_alert.message, 14, y, 180);
@@ -266,9 +338,9 @@
     }
     y += 10;
 
-    // Janela de Colheita
+    // 8. Janela de Colheita
     doc.setFontSize(14);
-    doc.text('6. Janela de Colheita', 14, y);
+    doc.text('8. Janela de Colheita', 14, y);
     y += 7;
     doc.setFontSize(10);
     y = addText(apiResponse.harvesting_window_alert.message, 14, y, 180);
@@ -280,9 +352,15 @@
     }
     y += 10;
 
-    // Recomendação de Irrigação
+    // Adicionar nova página se necessário
+    if (y > pageHeight - bottomMargin) {
+      doc.addPage();
+      y = 20;
+    }
+
+    // 9. Recomendação de Irrigação
     doc.setFontSize(14);
-    doc.text('7. Recomendação de Irrigação', 14, y);
+    doc.text('9. Recomendação de Irrigação', 14, y);
     y += 7;
     doc.setFontSize(10);
     y = addText(apiResponse.irrigation_recommendation.message, 14, y, 180);
@@ -294,27 +372,6 @@
     }
     y += 10;
 
-    // Graus-Dia (GDD)
-    doc.setFontSize(14);
-    doc.text('8. Graus-Dia (GDD)', 14, y);
-    y += 7;
-    doc.setFontSize(10);
-    y = addText(apiResponse.gdd_insight.message, 14, y, 180);
-    if (apiResponse.gdd_insight.gdd_calculated) {
-      y = addText(`GDD Acumulado (5 dias): ${apiResponse.gdd_insight.total_gdd?.toFixed(2)}`, 18, y, 180);
-      y = addText('Detalhes por período:', 18, y, 180);
-      apiResponse.gdd_insight.details.forEach((period: any) => {
-        y = addText(`- ${period.date}: ${period.gdd_value?.toFixed(2)} GDD`, 22, y, 180);
-      });
-    }
-    y += 10;
-
-    // Adicionar nova página se necessário
-    if (y > 280) {
-      doc.addPage();
-      y = 20;
-    }
-
     // Adicionar rodapé em todas as páginas ANTES de salvar
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
@@ -324,7 +381,7 @@
       doc.text(
         'Demeter - Inteligência Climática para o Agro',
         doc.internal.pageSize.getWidth() / 2,
-        doc.internal.pageSize.getHeight() - 10,
+        doc.internal.pageSize.getHeight() - 12,
         { align: 'center' }
       );
     }
@@ -401,6 +458,41 @@
     }
   }
 
+  function generateNdviInsight(satelliteData: any) {
+    const ndvi_value = satelliteData?.ndvi_value;
+
+    if (ndvi_value === null || ndvi_value === undefined) {
+        return { message: "Análise de satélite em processamento...", level: "info" };
+    }
+
+    let message = "";
+    let level = "info";
+
+    if (ndvi_value >= 0.7) {
+        message = "NDVI muito alto. Indica vegetação extremamente vigorosa e saudável. Excelente!";
+        level = "success";
+    } else if (ndvi_value >= 0.5) {
+        message = "NDVI alto. Indica vegetação saudável e bom desenvolvimento da cultura.";
+        level = "success";
+    } else if (ndvi_value >= 0.3) {
+        message = "NDVI moderado. A vegetação está presente, mas pode indicar estresse leve ou fase inicial de desenvolvimento.";
+        level = "warning";
+    } else if (ndvi_value >= 0.1) {
+        message = "NDVI baixo. Sugere vegetação esparsa, estresse significativo ou solo exposto. Requer investigação.";
+        level = "danger";
+    } else {
+        message = "NDVI muito baixo ou negativo. Indica ausência de vegetação ou áreas com problemas graves. Urge investigação.";
+        level = "danger";
+    }
+
+    return {
+        message: message,
+        level: level,
+        ndvi_value: ndvi_value,
+        explanation_text: "O Índice de Vegetação por Diferença Normalizada (NDVI) é um indicador gráfico que pode ser usado para analisar imagens de satélite e avaliar se a área contém vegetação verde e em que estágio de saúde ela se encontra. Valores de NDVI variam de -1 a +1. Valores mais altos (próximos de +1) indicam vegetação densa e saudável, enquanto valores mais baixos (próximos de -1 ou 0) podem indicar solo exposto, água ou vegetação estressada/morta."
+    };
+  }
+
   async function pollSatelliteAnalysis() {
     if (!satelliteAnalysisTaskId) return;
 
@@ -420,22 +512,19 @@
 
       // Análise concluída com sucesso
       const fetchedSatelliteResult = await response.json();
-      satelliteAnalysisResult = fetchedSatelliteResult; // Ensure satelliteAnalysisResult is updated
+      satelliteAnalysisResult = fetchedSatelliteResult;
       satelliteAnalysisStatus = 'completed';
       clearInterval(pollingInterval);
       pollingInterval = null;
 
-      // Atualiza o apiResponse principal com o resultado real da análise de satélite
-      // Preserva o ndvi_insight que já veio na resposta inicial do /insights/
+      // Gera o novo insight do NDVI com base nos resultados do satélite
+      const newNdviInsight = generateNdviInsight(fetchedSatelliteResult);
+
+      // Atualiza o apiResponse principal com os resultados reais
       apiResponse = {
         ...apiResponse,
-        satellite_analysis: {
-          ...apiResponse.satellite_analysis,
-          available: fetchedSatelliteResult.available,
-          message: fetchedSatelliteResult.message,
-          ndvi_value: fetchedSatelliteResult.ndvi_value,
-          image_url: fetchedSatelliteResult.image_url,
-        },
+        satellite_analysis: fetchedSatelliteResult, // Substitui toda a chave
+        ndvi_insight: newNdviInsight, // Substitui o insight antigo pelo novo
       };
 
     } catch (err: any) {
